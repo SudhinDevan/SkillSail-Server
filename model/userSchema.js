@@ -1,24 +1,24 @@
 import mongoose from "mongoose";
 
-const {Schema, model} = mongoose;
+const { Schema, model } = mongoose;
 
 const userSchema = new Schema({
   name: {
     type: String,
-    required: true
+    required: true,
   },
   email: {
     type: String,
     required: true,
-    unique: true
+    unique: true,
   },
   password: {
     type: String,
-    required: true
+    required: true,
   },
   isVerified: {
     type: Boolean,
-    default: false
+    default: false,
   },
   isAccess: {
     type: Boolean,
@@ -26,8 +26,12 @@ const userSchema = new Schema({
   },
   isAdmin: {
     type: Boolean,
-    default: false
-  }
-})
+    default: false,
+  },
+  role: {
+    type: Number,
+    default: null,
+  },
+});
 
-export default model('User', userSchema)
+export default model("User", userSchema);
