@@ -1,14 +1,15 @@
 import User from "../model/userSchema.js";
+import OtpModel from "../model/otp.js";
 import bcrypt from "bcrypt";
-import { verifyEmail } from "../utility/sendMail.js";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 dotenv.config();
+
 let jwtPrivateKey = process.env.JWT_SECRET_KEY;
 
 const signUp = async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, phone, password, role } = req.body;
     let existingUser = await User.findOne({ email: email });
 
     if (existingUser) {
@@ -24,19 +25,10 @@ const signUp = async (req, res) => {
     const user = new User({
       name,
       email,
+      phone,
       password: hashedPassword,
       role,
     });
-
-    const OTP = Math.floor(Math.random() * 10000);
-
-    const emailRecipients = ({
-      name,
-      email,
-      OTP
-    })
-
-    const verify = await verifyEmail(emailRecipients);
 
     await user.save();
 
@@ -52,21 +44,7 @@ const signUp = async (req, res) => {
 };
 
 const login = async (req, res, next) => {
-  const { email, password } = req.body;
-  let existingUser;
-  try {
-    existingUser = await User.findOne({ email: email });
-  } catch (err) {
-    return new Error(err);
-  }
-  if (!existingUser) {
-    return res.status(400).json({ message: "User does not exist" });
-  }
-  const isPasswordCorrect = bcrypt.compareSync(password, existingUser.password);
-  if (!isPasswordCorrect) {
-    return res.status(404).json({ message: "Invalid Credentials" });
-  }
-
+  let existingUser = req.user;
   const token = jwt.sign({ id: existingUser._id }, jwtPrivateKey, {
     expiresIn: "1d",
   });
@@ -82,13 +60,82 @@ const login = async (req, res, next) => {
   const sanitizedUser = {
     id: existingUser.id,
     name: existingUser.name,
+    phone: existingUser.phone,
     email: existingUser.email,
   };
 
-  return res
+  res
     .status(200)
     .json({ message: "login successfull", user: sanitizedUser, token });
 };
+
+const deleteOtp = async (req, res) => {
+  try {
+    await OtpModel.deleteMany({
+      createdAt: { $lt: new Date(Date.now() - 2 * 60 * 1000) },
+    });
+  } catch (error) {
+    console.error("Error deleting expired OTP documents:", error);
+  }
+};
+
+setInterval(deleteOtp, 60 * 1000);
+
+const verifyOtp = async (req, res) => {
+  const { data, otpValues } = req.body;
+  const user = await OtpModel.findOne({ email: data.email });
+  const otpString = otpValues.join("");
+  if (user.otp == otpString) {
+    const updateUser = await User.findOneAndUpdate(
+      { email: user.email },
+      { $set: { isVerified: true } }
+    );
+    console.log("updatedUser: ", updateUser);
+    return res
+      .status(200)
+      .json({ message: "successfully verified", updateUser });
+  } else {
+    return res.status(201).json({ message: "Incorrect OTP" });
+  }
+};
+
+const userLogout = async (req, res) => {
+  res
+    .cookie("token", "", {
+      httpOnly: true,
+      expires: new Date(0),
+      secure: true,
+      sameSite: "none",
+    })
+    .json({ message: "logged out", error: false });
+};
+
+const editProfile = async (req, res) => {
+  const data = req.body;
+  try {
+    let updatedObject = {};
+    if (data.name) {
+      updatedObject.name = data.name;
+    }
+    if (data.phone) {
+      updatedObject.phone = data.phone;
+    }
+    const user = await User.findOneAndUpdate(
+      { email: data.email },
+      { $set: updatedObject }
+    );
+    const updatedUser = await User.findOne({ email: user.email });
+    return res.status(200).json({ message: "profile edited", updatedUser });
+  } catch (error) {
+    res.status(400).json(error.message);
+  }
+};
+
+export { signUp, login, userLogout, verifyOtp, editProfile };
+
+////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////
 
 // const verifyToken = (req, res, next) => {
 //   const cookies = req.headers.cookie;
@@ -148,16 +195,3 @@ const login = async (req, res, next) => {
 //     next();
 //   });
 // };
-
-const userLogout = async (req, res) => {
-  res
-    .cookie("token", "", {
-      httpOnly: true,
-      expires: new Date(0),
-      secure: true,
-      sameSite: "none",
-    })
-    .json({ message: "logged out", error: false });
-};
-
-export { signUp, login, userLogout };

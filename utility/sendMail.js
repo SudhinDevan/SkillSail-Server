@@ -23,7 +23,7 @@ const verifyEmail = async (body) => {
       from: process.env.AU_EMAIL,
       to: body.email,
       subject: "Welcome to SkillSail",
-      html: `<p>Hello <strong>${body.name}</strong>, The otp to verify your SkillSail account is <strong>${body.OTP}</strong> Please verify your SkillSail account to start learning. If this is not done by you, you can safely ignore this email.Happy Learning`,
+      html: `<p>Hello <strong>${body.name}</strong>, The otp to verify your SkillSail account is <strong>${body.OTP}</strong> Please verify your SkillSail account to start learning. If this is not done by you, you can safely ignore this email.Happy Learning!!!`,
     };
 
     const info = await transporter.sendMail(mailOptions);
