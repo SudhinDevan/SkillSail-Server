@@ -1,6 +1,6 @@
 import userModel from "../model/userSchema.js";
 import OtpModel from "../model/otp.js";
-import { verifyEmail } from "../utility/sendMail.js";
+import { verifyEmail } from "../public/utility/sendMail.js";
 import bcrypt from "bcrypt";
 
 const verifyAccess = async (req, res, next) => {
@@ -12,7 +12,7 @@ const verifyAccess = async (req, res, next) => {
     return new Error(err);
   }
   if (!existingUser) {
-    return res.status(400).json({ message: "User does not exist" });
+    return res.status(404).json({ message: "User does not exist" });
   }
   const isPasswordCorrect = bcrypt.compareSync(password, existingUser.password);
   if (!isPasswordCorrect) {

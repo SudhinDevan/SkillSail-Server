@@ -5,37 +5,35 @@ import dotenv from "dotenv";
 dotenv.config();
 let jwtPrivateKey = process.env.JWT_SECRET_KEY;
 
-
 const signIn = async (req, res) => {
   const { email, password } = req.body;
-  let admin;
-  try {
-    admin = await userModel.findOne({ email: email });
-  } catch (err) {
-    return new Error(err);
+  const user = await userModel.findOne({ email: email });
+  if (user != null && user.role === 1000) {
+    const passwordVerify = await bcrypt.compare(password, user.password);
+    if (passwordVerify) {
+      const token = jwt.sign({ id: user._id }, jwtPrivateKey, {
+        expiresIn: "1d",
+      });
+      res.cookie("token", token, {
+        path: "/admin",
+        expires: new Date(Date.now() + 1000 * 60 * 60 * 24),
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+      });
+      const sanitizedUser = {
+        role: user.role,
+        email: user.email,
+      };
+      return res
+        .status(200)
+        .json({ message: "login Succcessfull", token, user: sanitizedUser });
+    } else {
+      return res.status(404).json({ message: "Invalid Credentials" });
+    }
+  } else {
+    return res.status(404).json({ message: "Invalid user" });
   }
-  if (!admin || !admin.isAdmin) {
-    return res.status(404).json({ message: "Invalid User" });
-  }
-  const passwordVerify = bcrypt.compare(password, admin.password);
-
-  if (!passwordVerify) {
-    return res.status(404).json({ message: "Invalid Credentials" });
-  }
-
-  const token = jwt.sign({ id: admin._id }, jwtPrivateKey, {
-    expiresIn: "1d",
-  });
-
-  res.cookie("token", token, {
-    path: "/admin",
-    expires: new Date(Date.now() + 1000 * 60 * 60 * 24),
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-  });
-
-  return res.status(200).json({ message: "login Succcessfull", token });
 };
 
 const adminLogout = async (req, res) => {
