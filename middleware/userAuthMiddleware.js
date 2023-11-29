@@ -1,6 +1,6 @@
 import userModel from "../model/userSchema.js";
 import OtpModel from "../model/otp.js";
-import { verifyEmail } from "../public/utility/sendMail.js";
+import { verifyEmail } from "../config/sendMail.js";
 import bcrypt from "bcrypt";
 
 const verifyAccess = async (req, res, next) => {
