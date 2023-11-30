@@ -19,7 +19,13 @@ const verifyAccess = async (req, res, next) => {
     return res.status(404).json({ message: "Invalid Credentials" });
   }
 
-  if (!existingUser.isVerified) {
+  if (existingUser.role === 3000 && !existingUser.isVerified) {
+    return res
+      .status(401)
+      .json({ message: "Please wait till the admin verifies your profile" });
+  }
+
+  if (!existingUser.isVerified && existingUser.role === 2000) {
     const OTP = Math.floor(Math.random() * 10000);
 
     const otpdetails = new OtpModel({

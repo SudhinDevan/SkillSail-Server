@@ -32,9 +32,16 @@ const userSchema = new Schema({
     type: Boolean,
     default: false,
   },
+  verifyDocument: {
+    type: Object,
+  },
   role: {
     type: Number,
     default: null,
+  },
+  refreshToken: {
+    type: String,
+    default: "",
   },
 });
 

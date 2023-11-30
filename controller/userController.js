@@ -1,15 +1,18 @@
 import User from "../model/userSchema.js";
 import OtpModel from "../model/otp.js";
 import bcrypt from "bcrypt";
+import { cloudinary } from "../config/cloudinary.js";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 dotenv.config();
 
 let jwtPrivateKey = process.env.JWT_SECRET_KEY;
+let jwtSecureKey = process.env.JWT_SECURE_KEY;
 
 const signUp = async (req, res) => {
   try {
-    const { name, email, phone, password, role } = req.body;
+    const { name, email, phone, password, isAccess, role, verifyDocument } =
+      req.body;
     let existingUser = await User.findOne({ email: email });
 
     if (existingUser) {
@@ -17,7 +20,12 @@ const signUp = async (req, res) => {
         message: "The user already exists! Please login.",
       });
     }
-
+    let file;
+    if (verifyDocument) {
+      file = await cloudinary.uploader.upload(verifyDocument, {
+        folder: "SkillSail",
+      });
+    }
     const saltRounds = 10;
     const genSalt = bcrypt.genSaltSync(saltRounds);
     const hashedPassword = bcrypt.hashSync(password, genSalt);
@@ -27,7 +35,9 @@ const signUp = async (req, res) => {
       email,
       phone,
       password: hashedPassword,
+      isAccess,
       role,
+      verifyDocument: file,
     });
 
     await user.save();
@@ -45,17 +55,25 @@ const signUp = async (req, res) => {
 
 const login = async (req, res, next) => {
   let existingUser = req.user;
-  const token = jwt.sign({ id: existingUser._id }, jwtPrivateKey, {
+
+  const accessToken = jwt.sign({ id: existingUser._id }, jwtPrivateKey, {
+    expiresIn: "30s",
+  });
+
+  const refreshToken = jwt.sign({ id: existingUser._id }, jwtSecureKey, {
     expiresIn: "1d",
   });
 
-  res.cookie("token", token, {
+  res.cookie("token", refreshToken, {
     path: "/",
     expires: new Date(Date.now() + 1000 * 60 * 60 * 24),
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
   });
+
+  existingUser.refreshToken = refreshToken;
+  await existingUser.save();
 
   const sanitizedUser = {
     id: existingUser.id,
@@ -67,7 +85,33 @@ const login = async (req, res, next) => {
 
   res
     .status(200)
-    .json({ message: "login successfull", user: sanitizedUser, token });
+    .json({ message: "login successfull", user: sanitizedUser, accessToken });
+};
+
+const handleRefreshToken = async (req, res) => {
+  try {
+    const cookies = req.cookies;
+
+    console.log("hai", req.cookies.jwt);
+    if (!cookies?.jwt) return res.sendStatus(401);
+    const refreshToken = cookies.jwt;
+
+    const userData = await userModel.findOne({ refreshToken: refreshToken });
+    console.log(userData);
+    if (!userData) return res.sendStatus(403);
+
+    jwt.verify(refreshToken, process.env.jwtSecureKey, (err, decoded) => {
+      if (err || userData.name !== decoded.username) return res.sendStatus(403);
+      const accessToken = jwt.sign(
+        { username: decoded.name },
+        process.env.jwtPrivateKey,
+        { expiresIn: "30s" }
+      );
+      res.json({ accessToken });
+    });
+  } catch (error) {
+    console.log(error);
+  }
 };
 
 const deleteOtp = async (req, res) => {
@@ -91,7 +135,6 @@ const verifyOtp = async (req, res) => {
       { email: user.email },
       { $set: { isVerified: true } }
     );
-    console.log("updatedUser: ", updateUser);
     return res
       .status(200)
       .json({ message: "successfully verified", updateUser });
@@ -132,7 +175,14 @@ const editProfile = async (req, res) => {
   }
 };
 
-export { signUp, login, userLogout, verifyOtp, editProfile };
+export {
+  signUp,
+  login,
+  userLogout,
+  verifyOtp,
+  editProfile,
+  handleRefreshToken,
+};
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////

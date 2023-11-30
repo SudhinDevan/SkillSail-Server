@@ -56,9 +56,22 @@ const userListing = async (req, res) => {
   }
 };
 
+const teacherApprovalListing = async (req, res) => {
+  try {
+    const teacherList = await userModel
+      .find({ role: 3000, $and: [{ isVerified: false }] })
+      .sort({ name: 1 });
+    res.status(200).json(teacherList);
+  } catch (error) {
+    res.json(error);
+  }
+};
+
 const teacherListing = async (req, res) => {
   try {
-    const teacherList = await userModel.find({ role: 3000 }).sort({ name: 1 });
+    const teacherList = await userModel
+      .find({ role: 3000, $and: [{ isVerified: true }] })
+      .sort({ name: 1 });
     res.status(200).json(teacherList);
   } catch (error) {
     res.json(error);
@@ -86,11 +99,27 @@ const teacherAccessChanger = async (req, res) => {
   res.json(teacher);
 };
 
+const approveTeacher = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await userModel.findOneAndUpdate(
+      { email: email },
+      { $set: { isVerified: true } },
+      { new: true }
+    );
+    return res.status(200).json({ message: "Teacher Approved" });
+  } catch (error) {
+    console.error("Error approving teacher:", error);
+  }
+};
+
 export {
   signIn,
   adminLogout,
   userListing,
   userAccessChanger,
+  teacherApprovalListing,
   teacherListing,
   teacherAccessChanger,
+  approveTeacher,
 };
