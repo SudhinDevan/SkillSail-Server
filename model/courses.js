@@ -39,10 +39,6 @@ const courses = new Schema({
     ref: "user",
     required: true,
   },
-  chapters: {
-    type: Array,
-    default: [],
-  },
   isShow: {
     type: Boolean,
     default: false,
