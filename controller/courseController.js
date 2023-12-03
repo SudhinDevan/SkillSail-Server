@@ -66,4 +66,13 @@ const chapterListing = async (req, res) => {
   }
 };
 
-export { courseDetails, createChapter, chapterListing };
+const listCourses = async (req, res) => {
+  try {
+    const courses = await courseModel.find().sort({ createdAt: -1 });
+    return res.status(200).json({ message: "success", courses });
+  } catch (err) {
+    console.log(err.message);
+  }
+};
+
+export { courseDetails, createChapter, chapterListing, listCourses };
