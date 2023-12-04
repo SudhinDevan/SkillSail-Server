@@ -66,6 +66,19 @@ const chapterListing = async (req, res) => {
   }
 };
 
+const chapterDetails = async (req, res) => {
+  try {
+    const chapter = req.query.chapterId;
+    const chapterDetails = await chapterModel.findOne({ _id: chapter });
+    if (!chapterDetails) {
+      return res.status(404).json({ message: "Invalid ChapterId" });
+    }
+    return res.status(200).json({ message: "success", chapterDetails });
+  } catch (err) {
+    console.log(err.message);
+  }
+};
+
 const listCourses = async (req, res) => {
   try {
     const courses = await courseModel.find().sort({ createdAt: -1 });
@@ -75,4 +88,22 @@ const listCourses = async (req, res) => {
   }
 };
 
-export { courseDetails, createChapter, chapterListing, listCourses };
+const courseDetailsForUser = async (req, res) => {
+  try {
+    const courseId = req.query.courseId;
+    const course = await courseModel.findOne({ _id: courseId });
+    const chapter = await chapterModel.find({ course: courseId });
+    return res.status(200).json({ message: "success", course, chapter });
+  } catch (err) {
+    return res.status(400).json({ err });
+  }
+};
+
+export {
+  courseDetails,
+  createChapter,
+  chapterListing,
+  listCourses,
+  courseDetailsForUser,
+  chapterDetails,
+};

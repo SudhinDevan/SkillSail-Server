@@ -6,6 +6,7 @@ import {
   createCourse,
 } from "../controller/vendorController.js";
 import {
+  chapterDetails,
   chapterListing,
   courseDetails,
   createChapter,
@@ -15,6 +16,7 @@ router.post("/createCourse", createCourse);
 router.get("/courseList", coursesListing);
 router.get("/courseDetails", courseDetails);
 router.post("/createChapter", createChapter);
-router.get("/chapterDetails", chapterListing)
+router.get("/chapterListing", chapterListing);
+router.get("/chapterDetails", chapterDetails);
 
 export default router;
