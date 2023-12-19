@@ -79,6 +79,29 @@ const chapterDetails = async (req, res) => {
   }
 };
 
+const deleteChapter = async (req, res) => {
+  try {
+    const { chapterId } = req.params;
+
+    const chapter = await chapterModel.findById(chapterId);
+
+    if (!chapter) {
+      return res.status(404).json({ message: "Chapter not found" });
+    }
+
+    const deletionResult = await chapterModel.deleteOne({ _id: chapterId });
+
+    if (deletionResult.deletedCount === 0) {
+      return res.status(400).json({ message: "Chapter deletion failed" });
+    }
+
+    return res.status(200).json({ message: "Successfully deleted" });
+  } catch (err) {
+    console.error("Error deleting chapter:", err);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
 const listCourses = async (req, res) => {
   try {
     const courses = await courseModel.find().sort({ createdAt: -1 });
@@ -106,4 +129,5 @@ export {
   listCourses,
   courseDetailsForUser,
   chapterDetails,
+  deleteChapter,
 };

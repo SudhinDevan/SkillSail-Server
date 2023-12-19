@@ -53,7 +53,7 @@ const signUp = async (req, res) => {
   }
 };
 
-const login = async (req, res, next) => {
+const login = async (req, res) => {
   let existingUser = req.user;
 
   const accessToken = jwt.sign({ id: existingUser._id }, jwtPrivateKey, {
@@ -64,13 +64,19 @@ const login = async (req, res, next) => {
     expiresIn: "1d",
   });
 
-  res.cookie("token", refreshToken, {
-    path: "/",
-    expires: new Date(Date.now() + 1000 * 60 * 60 * 24),
+  // res.cookie('jwt', refreshToken, {
+  //   httpOnly: true,
+  //   maxAge: 24 * 60 * 60 * 1000,
+  //   secure: false,
+  // });
+
+  res.cookie("jwt", refreshToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    maxAge: 24 * 60 * 60 * 1000,
+    sameSite: "None",
   });
+
+  // console.log("Cookies sent:", res.getHeaders()["set-cookie"]);
 
   existingUser.refreshToken = refreshToken;
   await existingUser.save();
@@ -92,13 +98,17 @@ const handleRefreshToken = async (req, res) => {
   try {
     const cookies = req.cookies;
 
-    console.log("hai", req.cookies.jwt);
+    // console.log('hai',req.cookies.jwt);
+
     if (!cookies?.jwt) return res.sendStatus(401);
+    console.log("sadfasdfklasdfl");
     const refreshToken = cookies.jwt;
 
-    const userData = await userModel.findOne({ refreshToken: refreshToken });
+    const userData = await User.findOne({ refreshToken: refreshToken });
     console.log(userData);
+    console.log("1");
     if (!userData) return res.sendStatus(403);
+    console.log("2");
 
     jwt.verify(refreshToken, process.env.jwtSecureKey, (err, decoded) => {
       if (err || userData.name !== decoded.username) return res.sendStatus(403);
@@ -144,6 +154,11 @@ const verifyOtp = async (req, res) => {
 };
 
 const userLogout = async (req, res) => {
+  const userId = req.query.id;
+  const user = await User.findOneAndUpdate(
+    { _id: userId },
+    { $set: { refreshToken: "" } }
+  );
   res
     .cookie("token", "", {
       httpOnly: true,
@@ -175,6 +190,39 @@ const editProfile = async (req, res) => {
   }
 };
 
+const editImage = async (req, res) => {
+  try {
+    const { email, file } = req.body;
+    let dp;
+    if (file) {
+      dp = await cloudinary.uploader.upload(file, {
+        folder: "SkillSail",
+      });
+    }
+    const user = await User.findOneAndUpdate(
+      { email: email },
+      { $set: { profilePic: dp } },
+      { new: true }
+    );
+    return res
+      .status(200)
+      .json({ message: "Successfully updated display image", user });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+const profileDetails = async (req, res) => {
+  try {
+    const email = req.query.email;
+    const user = await User.findOne({ email: email });
+    return res.status(200).json({ message: "success", user });
+  } catch (err) {
+    return res.status(400).json({ message: "error fetching data" });
+  }
+};
+
 export {
   signUp,
   login,
@@ -182,6 +230,8 @@ export {
   verifyOtp,
   editProfile,
   handleRefreshToken,
+  editImage,
+  profileDetails,
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////

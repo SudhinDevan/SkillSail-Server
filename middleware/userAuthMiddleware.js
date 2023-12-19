@@ -16,10 +16,11 @@ const verifyAccess = async (req, res, next) => {
   }
   const isPasswordCorrect = bcrypt.compareSync(password, existingUser.password);
   if (!isPasswordCorrect) {
-    return res.status(404).json({ message: "Invalid Credentials" });
+    res.status(401).json({ message: "Invalid Credentials" });
+    return;
   }
 
-  if (existingUser.role === 3000 && !existingUser.isVerified) {
+  if (!existingUser.isVerified) {
     return res
       .status(401)
       .json({ message: "Please wait till the admin verifies your profile" });

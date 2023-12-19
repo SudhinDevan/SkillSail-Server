@@ -1,25 +1,21 @@
 import express from "express";
 const router = express.Router();
 import {
-  signUp,
-  login,
-  userLogout,
-  verifyOtp,
+  editImage,
   editProfile,
+  profileDetails,
 } from "../controller/userController.js";
-import { verifyAccess } from "../middleware/userAuthMiddleware.js";
+
 import {
   courseDetailsForUser,
   listCourses,
 } from "../controller/courseController.js";
 
-router.post("/signup", signUp);
-router.post("/login", verifyAccess, login);
-router.post("/logout", userLogout);
-router.post("/verifyOtp", verifyOtp);
 router.post("/editProfile", editProfile);
 router.get("/courses", listCourses);
 router.get("/courseDetails", courseDetailsForUser);
+router.put("/editImage", editImage);
+router.get("/profileDetails", profileDetails);
 // router.post("/profile/displayimage", dispayImage);
 
 export default router;

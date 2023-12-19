@@ -4,7 +4,6 @@ const router = express.Router();
 import {
   adminLogout,
   approveTeacher,
-  signIn,
   teacherAccessChanger,
   teacherApprovalListing,
   teacherListing,
@@ -12,8 +11,8 @@ import {
   userListing,
 } from "../controller/adminController.js";
 
-router.post("/login", signIn);
 router.post("/logout", adminLogout);
+
 router.get("/userlist", userListing);
 router.put("/userAccess", userAccessChanger);
 router.get("/teacherRequest", teacherApprovalListing);

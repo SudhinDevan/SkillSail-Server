@@ -3,22 +3,33 @@ import dotenv from "dotenv";
 import mongoose from "mongoose";
 import userRoute from "./route/userRoute.js";
 import adminRoute from "./route/adminRoute.js";
+import authRoute from "./route/authRoute.js";
 import vendorRoute from "./route/vendorRoute.js";
+// import { verifyJWT } from "./middleware/verifyJwt.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 
 const app = express();
 dotenv.config();
+
+app.use(
+  cors({ credentials: true, origin: ["http://localhost:5173"], origin: true })
+);
+
+app.use(cookieParser());
 app.use(
   express.json({
     limit: "100mb",
   })
 );
-app.use(cookieParser());
-app.use(cors({ credentials: true, origin: "http://localhost:5173" }));
 
 const port = process.env.PORT;
-app.use("/", userRoute);
+
+app.use("/", authRoute);
+
+// app.use(verifyJWT);
+
+app.use("/user", userRoute);
 app.use("/admin", adminRoute);
 app.use("/tutor", vendorRoute);
 

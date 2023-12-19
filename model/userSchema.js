@@ -7,6 +7,9 @@ const userSchema = new Schema({
     type: String,
     required: true,
   },
+  profilePic: {
+    type: Object,
+  },
   email: {
     type: String,
     required: true,
