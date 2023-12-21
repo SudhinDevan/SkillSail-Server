@@ -1,5 +1,5 @@
 import userModel from "../model/userSchema.js";
-import CourseModel from "../model/courses.js";
+import courseModel from "../model/courses.js";
 import { cloudinary } from "../config/cloudinary.js";
 
 const createCourse = async (req, res) => {
@@ -23,7 +23,7 @@ const createCourse = async (req, res) => {
       file = await cloudinary.uploader.upload(image, {
         folder: "SkillSail",
       });
-      const newCourse = new CourseModel({
+      const newCourse = new courseModel({
         courseName: coursename,
         blurb: blurb,
         description: description,
@@ -52,7 +52,7 @@ const coursesListing = async (req, res) => {
   try {
     const userEmail = req.query.email;
     const user = await userModel.findOne({ email: userEmail });
-    const coursesList = await CourseModel.find({ tutor: user._id }).sort({
+    const coursesList = await courseModel.find({ tutor: user._id }).sort({
       courseName: 1,
     });
     res
@@ -63,4 +63,39 @@ const coursesListing = async (req, res) => {
   }
 };
 
-export { createCourse, coursesListing };
+const userListing = async (req, res) => {
+  try {
+    const { id } = req.body;
+    const tutorCourses = await courseModel
+      .find({ tutor: id })
+      .populate("students");
+    const studentsWithCourses = [];
+    // Iterate through the courses and extract students with their enrolled courses
+    tutorCourses.forEach((course) => {
+      course.students.forEach((student) => {
+        studentsWithCourses.push({
+          student: student,
+          course: {
+            _id: course._id,
+            courseName: course.courseName,
+            price: course.price,
+            // Add other course details you want to include
+          },
+        });
+      });
+    });
+
+    return res.status(200).json({
+      message: "Student list with enrolled courses successfully fetched",
+      studentsWithCourses,
+    });
+  } catch (error) {
+    console.error("Error in userListing:", error);
+    if (error.name === "CastError") {
+      return res.status(400).json({ error: "Invalid ID format" });
+    }
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+export { createCourse, coursesListing, userListing };

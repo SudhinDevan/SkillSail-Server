@@ -1,4 +1,5 @@
 import User from "../model/userSchema.js";
+import coursesModel from "../model/courses.js";
 import OtpModel from "../model/otp.js";
 import bcrypt from "bcrypt";
 import { cloudinary } from "../config/cloudinary.js";
@@ -11,8 +12,15 @@ let jwtSecureKey = process.env.JWT_SECURE_KEY;
 
 const signUp = async (req, res) => {
   try {
-    const { name, email, phone, password, isAccess, role, verifyDocument } =
-      req.body;
+    const {
+      name,
+      email,
+      phone,
+      password,
+      isAccess,
+      role,
+      verifyDocument,
+    } = req.body;
     let existingUser = await User.findOne({ email: email });
 
     if (existingUser) {
@@ -55,68 +63,53 @@ const signUp = async (req, res) => {
 
 const login = async (req, res) => {
   let existingUser = req.user;
+  if (existingUser.isAccess) {
+    const accessToken = jwt.sign({ id: existingUser._id }, jwtPrivateKey, {
+      expiresIn: "30s",
+    });
 
-  const accessToken = jwt.sign({ id: existingUser._id }, jwtPrivateKey, {
-    expiresIn: "30s",
-  });
+    const refreshToken = jwt.sign({ id: existingUser._id }, jwtSecureKey, {
+      expiresIn: "1d",
+    });
 
-  const refreshToken = jwt.sign({ id: existingUser._id }, jwtSecureKey, {
-    expiresIn: "1d",
-  });
+    res.cookie("jwt", refreshToken, {
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000,
+    });
 
-  // res.cookie('jwt', refreshToken, {
-  //   httpOnly: true,
-  //   maxAge: 24 * 60 * 60 * 1000,
-  //   secure: false,
-  // });
+    existingUser.refreshToken = refreshToken;
+    await existingUser.save();
 
-  res.cookie("jwt", refreshToken, {
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000,
-    sameSite: "None",
-  });
+    const sanitizedUser = {
+      id: existingUser.id,
+      name: existingUser.name,
+      phone: existingUser.phone,
+      email: existingUser.email,
+      role: existingUser.role,
+    };
 
-  // console.log("Cookies sent:", res.getHeaders()["set-cookie"]);
-
-  existingUser.refreshToken = refreshToken;
-  await existingUser.save();
-
-  const sanitizedUser = {
-    id: existingUser.id,
-    name: existingUser.name,
-    phone: existingUser.phone,
-    email: existingUser.email,
-    role: existingUser.role,
-  };
-
-  res
-    .status(200)
-    .json({ message: "login successfull", user: sanitizedUser, accessToken });
+    res
+      .status(200)
+      .json({ message: "login successfull", user: sanitizedUser, accessToken });
+  } else {
+    return res.status(401).json({ message: "Access Denied" });
+  }
 };
 
 const handleRefreshToken = async (req, res) => {
   try {
     const cookies = req.cookies;
-
-    // console.log('hai',req.cookies.jwt);
-
     if (!cookies?.jwt) return res.sendStatus(401);
-    console.log("sadfasdfklasdfl");
     const refreshToken = cookies.jwt;
 
     const userData = await User.findOne({ refreshToken: refreshToken });
-    console.log(userData);
-    console.log("1");
     if (!userData) return res.sendStatus(403);
-    console.log("2");
 
-    jwt.verify(refreshToken, process.env.jwtSecureKey, (err, decoded) => {
-      if (err || userData.name !== decoded.username) return res.sendStatus(403);
-      const accessToken = jwt.sign(
-        { username: decoded.name },
-        process.env.jwtPrivateKey,
-        { expiresIn: "30s" }
-      );
+    jwt.verify(refreshToken, jwtSecureKey, (err, decoded) => {
+      if (err || !userData._id.equals(decoded.id)) return res.sendStatus(403);
+      const accessToken = jwt.sign({ id: decoded.id }, jwtPrivateKey, {
+        expiresIn: "30s",
+      });
       res.json({ accessToken });
     });
   } catch (error) {
@@ -136,7 +129,7 @@ const deleteOtp = async (req, res) => {
 
 setInterval(deleteOtp, 60 * 1000);
 
-const verifyOtp = async (req, res) => {
+const   verifyOtp = async (req, res) => {
   const { data, otpValues } = req.body;
   const user = await OtpModel.findOne({ email: data.email });
   const otpString = otpValues.join("");
@@ -153,20 +146,41 @@ const verifyOtp = async (req, res) => {
   }
 };
 
+// const userLogout = async (req, res) => {
+//   const userId = req.query.id;
+//   const user = await User.findOneAndUpdate(
+//     { _id: userId },
+//     { $set: { refreshToken: "" } }
+//   );
+//   res
+//     .cookie("token", "", {
+//       httpOnly: true,
+//       expires: new Date(0),
+//       secure: true,
+//       sameSite: "none",
+//     })
+//     .json({ message: "logged out", error: false });
+// };
+
 const userLogout = async (req, res) => {
-  const userId = req.query.id;
-  const user = await User.findOneAndUpdate(
-    { _id: userId },
-    { $set: { refreshToken: "" } }
-  );
-  res
-    .cookie("token", "", {
-      httpOnly: true,
-      expires: new Date(0),
-      secure: true,
-      sameSite: "none",
-    })
-    .json({ message: "logged out", error: false });
+  try {
+    const cookies = req.cookies;
+    if (!cookies?.jwt) return res.sendStatus(204);
+    const refreshToken = cookies.jwt;
+
+    const userData = await User.findOne({ refreshToken: refreshToken });
+    if (!userData) {
+      res.clearCookie("jwt", { httpOnly: true });
+      return res.sendStatus(204);
+    }
+    userData.refreshToken = "";
+    await userData.save();
+
+    res.clearCookie("jwt", { httpOnly: true });
+    res.sendStatus(204);
+  } catch (error) {
+    console.log(error);
+  }
 };
 
 const editProfile = async (req, res) => {
@@ -223,6 +237,27 @@ const profileDetails = async (req, res) => {
   }
 };
 
+const userCourses = async (req, res) => {
+  try {
+    const { id } = req.body;
+    const user = await User.findById(id);
+    if (user.appliedCourses) {
+      const appliedCourseIds = user.appliedCourses;
+      const appliedCoursesDetails = await coursesModel.find({
+        _id: { $in: appliedCourseIds },
+      });
+      return res.status(200).json({
+        message: "courses fetched successfully",
+        appliedCoursesDetails,
+      });
+    } else {
+      return res.status(201).json({ message: "No courses purchased" });
+    }
+  } catch (error) {
+    console.log(error);
+  }
+};
+
 export {
   signUp,
   login,
@@ -232,67 +267,5 @@ export {
   handleRefreshToken,
   editImage,
   profileDetails,
+  userCourses,
 };
-
-////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////
-
-// const verifyToken = (req, res, next) => {
-//   const cookies = req.headers.cookie;
-//   const token = cookies.split("=")[1];
-//   if (!token) {
-//     return res.status(404).json({ message: "No token found" });
-//   }
-//   jwt.verify(String(token), jwtPrivateKey, (err, user) => {
-//     if (err) {
-//       return res.status(400).json({ message: "Invalid token" });
-//     }
-//     req.id = user.id;
-//     next();
-//   });
-// };
-
-// const getUser = async (req, res, next) => {
-//   let id = req.id;
-//   let user;
-//   try {
-//     user = await User.findById(id, "-password");
-//   } catch (err) {
-//     return new Error(err);
-//   }
-//   if (!user) {
-//     return res.status(404).json({ message: "User not found" });
-//   }
-//   res.status(200).json({ user });
-// };
-
-// const refreshToken = (req, res, next) => {
-//   const cookies = req.headers.cookie;
-//   console.log("cookies: ", cookies);
-//   const prevToken = cookies.split("=")[1];
-//   if (!prevToken) {
-//     res.status(400).json({ message: "Could'nt find token" });
-//   }
-
-//   jwt.verify(String(prevToken), jwtPrivateKey, (err, user) => {
-//     if (err) {
-//       res.status(400).json({ message: "Invalid Token" });
-//     }
-//     res.clearCookie(`${user.id}`);
-//     req.cookies[`${user.id}`] = "";
-
-//     const token = jwt.sign({ id: user.id }, jwtPrivateKey, {
-//       expiresIn: "35s",
-//     });
-
-//     res.cookie(String(user.id), token, {
-//       path: "/",
-//       expires: new Date(Date.now() + 1000 * 30),
-//       httpOnly: true,
-//       samesite: "lax",
-//     });
-//     req.id = user.id;
-//     next();
-//   });
-// };

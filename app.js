@@ -5,9 +5,10 @@ import userRoute from "./route/userRoute.js";
 import adminRoute from "./route/adminRoute.js";
 import authRoute from "./route/authRoute.js";
 import vendorRoute from "./route/vendorRoute.js";
-// import { verifyJWT } from "./middleware/verifyJwt.js";
+import { verifyJWT } from "./middleware/verifyJwt.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
+import verifyUserRole from "./middleware/verifyAccess.js";
 
 const app = express();
 dotenv.config();
@@ -27,9 +28,9 @@ const port = process.env.PORT;
 
 app.use("/", authRoute);
 
-// app.use(verifyJWT);
+app.use(verifyJWT);
 
-app.use("/user", userRoute);
+app.use("/user", verifyUserRole, userRoute);
 app.use("/admin", adminRoute);
 app.use("/tutor", vendorRoute);
 

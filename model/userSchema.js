@@ -38,6 +38,10 @@ const userSchema = new Schema({
   verifyDocument: {
     type: Object,
   },
+  appliedCourses: {
+    type: [{ type: mongoose.Schema.Types.ObjectId, ref: "course" }],
+    default: [],
+  },
   role: {
     type: Number,
     default: null,

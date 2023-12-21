@@ -3,7 +3,9 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 dotenv.config();
+
 let jwtPrivateKey = process.env.JWT_SECRET_KEY;
+let jwtSecureKey = process.env.JWT_SECURE_KEY;
 
 const signIn = async (req, res) => {
   const { email, password } = req.body;
@@ -11,23 +13,31 @@ const signIn = async (req, res) => {
   if (user != null && user.role === 1000) {
     const passwordVerify = await bcrypt.compare(password, user.password);
     if (passwordVerify) {
-      const token = jwt.sign({ id: user._id }, jwtPrivateKey, {
+      const accessToken = jwt.sign({ id: user._id }, jwtPrivateKey, {
+        expiresIn: "30s",
+      });
+
+      const refreshToken = jwt.sign({ id: user._id }, jwtSecureKey, {
         expiresIn: "1d",
       });
-      res.cookie("token", token, {
-        path: "/admin",
-        expires: new Date(Date.now() + 1000 * 60 * 60 * 24),
+
+      res.cookie("jwt", refreshToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
+        maxAge: 24 * 60 * 60 * 1000,
       });
+
+      user.refreshToken = refreshToken;
+      await user.save();
+
       const sanitizedUser = {
         role: user.role,
         email: user.email,
       };
-      return res
-        .status(200)
-        .json({ message: "login Succcessfull", token, user: sanitizedUser });
+      return res.status(200).json({
+        message: "login Succcessfull",
+        accessToken,
+        user: sanitizedUser,
+      });
     } else {
       return res.status(404).json({ message: "Invalid Credentials" });
     }
@@ -37,15 +47,15 @@ const signIn = async (req, res) => {
 };
 
 const adminLogout = async (req, res) => {
-  res
-    .cookie("token", "", {
-      httpOnly: true,
-      expires: new Date(0),
-      secure: true,
-      sameSite: "none",
-    })
-    .status(200)
-    .json({ message: "logged out", error: false });
+  try {
+    res.clearCookie("jwt", { httpOnly: true });
+    return res.status(200).json({ message: "logged out", error: false });
+  } catch (error) {
+    console.error("Error clearing cookie:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal Server Error", error: true });
+  }
 };
 
 const userListing = async (req, res) => {

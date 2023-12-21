@@ -36,8 +36,12 @@ const courses = new Schema({
   },
   tutor: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "user",
+    ref: "User",
     required: true,
+  },
+  students: {
+    type: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    default: [],
   },
   isShow: {
     type: Boolean,

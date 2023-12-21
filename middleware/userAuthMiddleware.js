@@ -20,7 +20,7 @@ const verifyAccess = async (req, res, next) => {
     return;
   }
 
-  if (!existingUser.isVerified) {
+  if (!existingUser.isVerified && existingUser.role === 3000) {
     return res
       .status(401)
       .json({ message: "Please wait till the admin verifies your profile" });
