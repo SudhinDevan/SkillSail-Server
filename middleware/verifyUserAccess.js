@@ -1,3 +1,4 @@
+import { userLogout } from "../controller/userController.js";
 import userModel from "../model/userSchema.js";
 
 const ROLES = {

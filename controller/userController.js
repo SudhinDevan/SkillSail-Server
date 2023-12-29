@@ -1,26 +1,20 @@
 import User from "../model/userSchema.js";
 import coursesModel from "../model/courses.js";
 import OtpModel from "../model/otp.js";
-import bcrypt from "bcrypt";
+import bcrypt, { genSalt } from "bcrypt";
 import { cloudinary } from "../config/cloudinary.js";
+import { verifyEmail } from "../config/sendMail.js";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 dotenv.config();
 
-let jwtPrivateKey = process.env.JWT_SECRET_KEY;
-let jwtSecureKey = process.env.JWT_SECURE_KEY;
+let accessTokenKey = process.env.JWT_SECRET_KEY;
+let refreshTokenKey = process.env.JWT_SECURE_KEY;
 
 const signUp = async (req, res) => {
   try {
-    const {
-      name,
-      email,
-      phone,
-      password,
-      isAccess,
-      role,
-      verifyDocument,
-    } = req.body;
+    const { name, email, phone, password, isAccess, role, verifyDocument } =
+      req.body;
     let existingUser = await User.findOne({ email: email });
 
     if (existingUser) {
@@ -64,11 +58,11 @@ const signUp = async (req, res) => {
 const login = async (req, res) => {
   let existingUser = req.user;
   if (existingUser.isAccess) {
-    const accessToken = jwt.sign({ id: existingUser._id }, jwtPrivateKey, {
+    const accessToken = jwt.sign({ 'userId': existingUser._id }, accessTokenKey, {
       expiresIn: "30s",
     });
 
-    const refreshToken = jwt.sign({ id: existingUser._id }, jwtSecureKey, {
+    const refreshToken = jwt.sign({ 'userId': existingUser._id }, refreshTokenKey, {
       expiresIn: "1d",
     });
 
@@ -99,17 +93,22 @@ const login = async (req, res) => {
 const handleRefreshToken = async (req, res) => {
   try {
     const cookies = req.cookies;
+    // console.log("cookie", cookies.jwt);
     if (!cookies?.jwt) return res.sendStatus(401);
     const refreshToken = cookies.jwt;
 
     const userData = await User.findOne({ refreshToken: refreshToken });
+    // console.log("user", userData);
     if (!userData) return res.sendStatus(403);
 
-    jwt.verify(refreshToken, jwtSecureKey, (err, decoded) => {
-      if (err || !userData._id.equals(decoded.id)) return res.sendStatus(403);
-      const accessToken = jwt.sign({ id: decoded.id }, jwtPrivateKey, {
+    jwt.verify(refreshToken, refreshTokenKey, (err, decoded) => {
+      if (err || !userData._id.equals(decoded.userId))
+        // console.log("user", userData);
+        return res.sendStatus(403);
+      const accessToken = jwt.sign({ 'userId': decoded.userId }, accessTokenKey, {
         expiresIn: "30s",
       });
+      // console.log("accessToken", accessToken);
       res.json({ accessToken });
     });
   } catch (error) {
@@ -129,7 +128,7 @@ const deleteOtp = async (req, res) => {
 
 setInterval(deleteOtp, 60 * 1000);
 
-const   verifyOtp = async (req, res) => {
+const verifyOtp = async (req, res) => {
   const { data, otpValues } = req.body;
   const user = await OtpModel.findOne({ email: data.email });
   const otpString = otpValues.join("");
@@ -230,7 +229,9 @@ const editImage = async (req, res) => {
 const profileDetails = async (req, res) => {
   try {
     const email = req.query.email;
-    const user = await User.findOne({ email: email });
+    const user = await User.findOne({ email: email }).populate(
+      "appliedCourses"
+    );
     return res.status(200).json({ message: "success", user });
   } catch (err) {
     return res.status(400).json({ message: "error fetching data" });
@@ -258,6 +259,54 @@ const userCourses = async (req, res) => {
   }
 };
 
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email: email });
+    if (!user) {
+      return res.status(404).json({ messsage: "user not found" });
+    }
+    const OTP = Math.floor(Math.random() * 10000);
+
+    const otpdetails = new OtpModel({
+      name: user.name,
+      email: user.email,
+      otp: OTP,
+    });
+
+    const emailRecipients = {
+      name: user.name,
+      email: user.email,
+      OTP,
+    };
+    console.log("otp: ", OTP);
+    await otpdetails.save();
+    const verify = await verifyEmail(emailRecipients);
+    console.log("here");
+    return res
+      .status(200)
+      .json({ message: "verify your account", user: emailRecipients });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+const changePassword = async (req, res) => {
+  const data = req.body;
+  const user = await User.findById(data.id);
+  if (!user) {
+    return res.status(404).json({ message: "User not found" });
+  }
+  const saltRounds = 10;
+  const genSalt = bcrypt.genSaltSync(saltRounds);
+  const newPassword = bcrypt.hashSync(data.password, genSalt);
+
+  user.password = newPassword;
+  await user.save();
+
+  res.status(200).json({ message: "Password changed Successfully" });
+};
+
 export {
   signUp,
   login,
@@ -268,4 +317,6 @@ export {
   editImage,
   profileDetails,
   userCourses,
+  forgotPassword,
+  changePassword,
 };

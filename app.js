@@ -8,7 +8,9 @@ import vendorRoute from "./route/vendorRoute.js";
 import { verifyJWT } from "./middleware/verifyJwt.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
-import verifyUserRole from "./middleware/verifyAccess.js";
+import verifyUserRole from "./middleware/verifyUserAccess.js";
+import verifyTutorRole from "./middleware/verifyTutorAccess.js";
+import verifyAdminRole from "./middleware/verifyAdminAccess.js";
 
 const app = express();
 dotenv.config();
@@ -31,8 +33,8 @@ app.use("/", authRoute);
 app.use(verifyJWT);
 
 app.use("/user", verifyUserRole, userRoute);
-app.use("/admin", adminRoute);
-app.use("/tutor", vendorRoute);
+app.use("/tutor", verifyTutorRole, vendorRoute);
+app.use("/admin", verifyAdminRole, adminRoute);
 
 const db = process.env.DATABASE;
 

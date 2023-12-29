@@ -122,6 +122,39 @@ const courseDetailsForUser = async (req, res) => {
   }
 };
 
+const editCourse = async (req, res) => {
+  try {
+    const details = req.body;
+    console.log(details);
+    let file;
+    if (details.image) {
+      file = await cloudinary.uploader.upload(details.image, {
+        folder: "SkillSail",
+      });
+    }
+
+    const course = await courseModel.findOneAndUpdate(
+      { _id: details.changes.courseId },
+      {
+        $set: {
+          blurb: details.changes.Blurb || undefined,
+          description: details.changes.Description || undefined,
+          isCompleted: details.isChecked,
+          price: details.changes.Price || undefined,
+          courseName: details.changes.courseName || undefined,
+          thumbnail: file || undefined,
+        },
+      },
+      { new: true }
+    );
+
+    return res.status(200).json({ message: "Successfully Updated", course });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+
 export {
   courseDetails,
   createChapter,
@@ -130,4 +163,5 @@ export {
   courseDetailsForUser,
   chapterDetails,
   deleteChapter,
+  editCourse,
 };

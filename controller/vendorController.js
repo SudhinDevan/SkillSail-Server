@@ -52,9 +52,28 @@ const coursesListing = async (req, res) => {
   try {
     const userEmail = req.query.email;
     const user = await userModel.findOne({ email: userEmail });
-    const coursesList = await courseModel.find({ tutor: user._id }).sort({
-      courseName: 1,
-    });
+    const coursesList = await courseModel
+      .find({ tutor: user._id, isCompleted: false })
+      .sort({
+        courseName: 1,
+      });
+    res
+      .status(200)
+      .json({ message: "courses fetched successfully", coursesList });
+  } catch (error) {
+    res.json(error);
+  }
+};
+
+const publicCoursesListing = async (req, res) => {
+  try {
+    const userEmail = req.query.email;
+    const user = await userModel.findOne({ email: userEmail });
+    const coursesList = await courseModel
+      .find({ tutor: user._id, isCompleted: true })
+      .sort({
+        courseName: 1,
+      });
     res
       .status(200)
       .json({ message: "courses fetched successfully", coursesList });
@@ -98,4 +117,46 @@ const userListing = async (req, res) => {
   }
 };
 
-export { createCourse, coursesListing, userListing };
+const tutorEditImage = async (req, res) => {
+  try {
+    const { email, file } = req.body;
+    let dp;
+    if (file) {
+      dp = await cloudinary.uploader.upload(file, {
+        folder: "SkillSail",
+      });
+    }
+    const user = await userModel.findOneAndUpdate(
+      { email: email },
+      { $set: { profilePic: dp } },
+      { new: true }
+    );
+    return res
+      .status(200)
+      .json({ message: "Successfully updated display image", user });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+const tutorProfileDetails = async (req, res) => {
+  try {
+    const email = req.query.email;
+    const user = await userModel
+      .findOne({ email: email })
+      .populate("appliedCourses");
+    return res.status(200).json({ message: "success", user });
+  } catch (err) {
+    return res.status(400).json({ message: "error fetching data" });
+  }
+};
+
+export {
+  createCourse,
+  coursesListing,
+  userListing,
+  tutorEditImage,
+  tutorProfileDetails,
+  publicCoursesListing,
+};
