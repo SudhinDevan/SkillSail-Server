@@ -5,6 +5,7 @@ const { Schema, model } = mongoose;
 const blogs = new Schema({
   author: {
     type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
     required: true,
   },
   blogHeading: {

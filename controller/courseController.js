@@ -125,7 +125,6 @@ const courseDetailsForUser = async (req, res) => {
 const editCourse = async (req, res) => {
   try {
     const details = req.body;
-    console.log(details);
     let file;
     if (details.image) {
       file = await cloudinary.uploader.upload(details.image, {

@@ -1,4 +1,6 @@
 import userModel from "../model/userSchema.js";
+import courseModel from "../model/courses.js";
+import paymentModel from "../model/payment.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
@@ -61,7 +63,7 @@ const adminLogout = async (req, res) => {
 const userListing = async (req, res) => {
   try {
     const userList = await userModel.find({ role: 2000 }).sort({ name: 1 });
-    res.status(200).json(userList);
+    res.status(200).json({ message: "Users fetched successfully", userList });
   } catch (error) {
     res.json(error);
   }
@@ -124,6 +126,48 @@ const approveTeacher = async (req, res) => {
   }
 };
 
+const courseListing = async (req, res) => {
+  try {
+    const course = await courseModel.find().populate("tutor");
+    return res
+      .status(200)
+      .json({ message: "Course fetched successfully", course });
+  } catch (error) {
+    console.error("Error fetching course", error);
+  }
+};
+
+const transactions = async (req, res) => {
+  try {
+    const statement = await paymentModel
+      .find()
+      .populate("course")
+      .populate("tutor")
+      .populate("user");
+    return res
+      .status(200)
+      .json({ message: "Transactions fetched successfully", statement });
+  } catch (error) {
+    console.error("Something went wrong", error);
+  }
+};
+
+const paymentToTutor = async (req, res) => {
+  try {
+    const { id } = req.body;
+    const payment = await paymentModel.findOneAndUpdate(
+      { _id: id },
+      { $set: { paymentToTutor: true } },
+      { new: true }
+    );
+    return res
+      .status(200)
+      .json({ message: "Payment Modified Successfully", payment });
+  } catch (error) {
+    console.error("Something went wrong", error);
+  }
+};
+
 export {
   signIn,
   adminLogout,
@@ -132,5 +176,8 @@ export {
   teacherApprovalListing,
   teacherListing,
   teacherAccessChanger,
+  courseListing,
   approveTeacher,
+  transactions,
+  paymentToTutor,
 };

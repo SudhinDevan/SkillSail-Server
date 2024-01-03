@@ -55,4 +55,44 @@ const blogListing = async (req, res) => {
   }
 };
 
-export { createBlog, blogListing };
+const blogDetials = async (req, res) => {
+  try {
+    const blogId = req.query.blogId;
+    const blogDetails = await blogModel
+      .findOne({ _id: blogId })
+      .populate("author");
+    return res
+      .status(200)
+      .json({ message: "blog fetched successfully", blogDetails });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+const editBlog = async (req, res) => {
+  try {
+    const data = req.body;
+    let file;
+    if (data.image) {
+      file = await cloudinary.uploader.upload(data.image, {
+        folder: "SkillSail",
+      });
+    }
+    const blog = await blogModel.findOneAndUpdate(
+      { _id: data.inputs.id },
+      {
+        $set: {
+          blogHeading: data.inputs.heading || undefined,
+          content: data.inputs.content || undefined,
+          thumbnail: file || undefined,
+        },
+      },
+      { new: true }
+    );
+    return res.status(200).json({ message: "Edited Successfully", blog });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export { createBlog, blogListing, blogDetials, editBlog };

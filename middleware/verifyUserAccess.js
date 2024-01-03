@@ -1,4 +1,3 @@
-import { userLogout } from "../controller/userController.js";
 import userModel from "../model/userSchema.js";
 
 const ROLES = {
@@ -8,7 +7,7 @@ const ROLES = {
 };
 
 const verifyUserRole = async (req, res, next) => {
-  const userData = await userModel.findById(req.user);
+  const userData = await userModel.findById(req.userId);
   if (userData.role != ROLES.User) return res.status(401).json({ role: true });
   if (!userData.isAccess) return res.status(401).json({ access: true });
   next();

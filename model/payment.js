@@ -9,12 +9,12 @@ const paymentModel = new Schema({
   },
   user: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "user",
+    ref: "User",
     required: true,
   },
   tutor: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "user",
+    ref: "User",
     required: true,
   },
   course: {
@@ -25,6 +25,10 @@ const paymentModel = new Schema({
   price: {
     type: Number,
     required: true,
+  },
+  paymentToTutor: {
+    type: Boolean,
+    default: false,
   },
   createdAt: {
     type: Date,
