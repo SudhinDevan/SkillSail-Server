@@ -15,11 +15,11 @@ const signIn = async (req, res) => {
   if (user != null && user.role === 1000) {
     const passwordVerify = await bcrypt.compare(password, user.password);
     if (passwordVerify) {
-      const accessToken = jwt.sign({ id: user._id }, jwtPrivateKey, {
+      const accessToken = jwt.sign({ userId: user._id }, jwtPrivateKey, {
         expiresIn: "30s",
       });
 
-      const refreshToken = jwt.sign({ id: user._id }, jwtSecureKey, {
+      const refreshToken = jwt.sign({ userId: user._id }, jwtSecureKey, {
         expiresIn: "1d",
       });
 
@@ -168,6 +168,39 @@ const paymentToTutor = async (req, res) => {
   }
 };
 
+const dashboardData = async (req, res) => {
+  try {
+    const student = await paymentModel.find();
+    const studentCount = student.length;
+    const course = await courseModel.find();
+    const courseCount = course.length;
+    const publicCourses = await courseModel.find({
+      isCompleted: true,
+    });
+    const publicCourseCount = publicCourses.length;
+    const payments = await paymentModel.find();
+    const totalRevenue = payments.reduce(
+      (total, payment) => total + payment.price,
+      0
+    );
+    const tableData = await paymentModel
+      .find()
+      .populate("course user")
+      .sort({ createdAt: -1 })
+      .limit(3); 
+    return res.status(200).json({
+      message: "success",
+      studentCount,
+      courseCount,
+      publicCourseCount,
+      totalRevenue,
+      tableData,
+    });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
 export {
   signIn,
   adminLogout,
@@ -180,4 +213,5 @@ export {
   approveTeacher,
   transactions,
   paymentToTutor,
+  dashboardData,
 };

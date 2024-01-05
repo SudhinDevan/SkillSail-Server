@@ -93,22 +93,18 @@ const login = async (req, res) => {
 const handleRefreshToken = async (req, res) => {
   try {
     const cookies = req.cookies;
-    // console.log("cookie", cookies.jwt);
     if (!cookies?.jwt) return res.sendStatus(401);
     const refreshToken = cookies.jwt;
 
     const userData = await User.findOne({ refreshToken: refreshToken });
-    // console.log("user", userData);
     if (!userData) return res.sendStatus(403);
 
     jwt.verify(refreshToken, refreshTokenKey, (err, decoded) => {
       if (err || !userData._id.equals(decoded.userId))
-        // console.log("user", userData);
         return res.sendStatus(403);
       const accessToken = jwt.sign({ 'userId': decoded.userId }, accessTokenKey, {
         expiresIn: "30s",
       });
-      // console.log("accessToken", accessToken);
       res.json({ accessToken });
     });
   } catch (error) {
@@ -282,7 +278,6 @@ const forgotPassword = async (req, res) => {
     console.log("otp: ", OTP);
     await otpdetails.save();
     const verify = await verifyEmail(emailRecipients);
-    console.log("here");
     return res
       .status(200)
       .json({ message: "verify your account", user: emailRecipients });

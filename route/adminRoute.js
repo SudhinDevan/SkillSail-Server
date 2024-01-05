@@ -5,6 +5,7 @@ import {
   adminLogout,
   approveTeacher,
   courseListing,
+  dashboardData,
   paymentToTutor,
   teacherAccessChanger,
   teacherApprovalListing,
@@ -25,5 +26,6 @@ router.get("/teacherRequest", teacherApprovalListing);
 router.put("/teacherAccess", teacherAccessChanger);
 router.post("/approveTeacher", approveTeacher);
 router.get("/teacherListing", teacherListing);
+router.get("/dashboardData", dashboardData)
 
 export default router;

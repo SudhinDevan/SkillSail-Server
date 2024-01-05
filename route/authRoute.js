@@ -15,6 +15,7 @@ import {
 import { userLogout } from "../controller/userController.js";
 
 import { verifyAccess } from "../middleware/userAuthMiddleware.js";
+import { dashboardBlog } from "../controller/blogController.js";
 
 router.get("/refresh", handleRefreshToken);
 router.post("/forgotPassword", forgotPassword);
@@ -24,5 +25,6 @@ router.post("/signup", signUp);
 router.post("/login", verifyAccess, login);
 router.post("/verifyOtp", verifyOtp);
 router.post("/changePassword", changePassword);
+router.get("/blog", dashboardBlog);
 
 export default router;

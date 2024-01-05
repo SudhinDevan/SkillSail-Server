@@ -1,11 +1,20 @@
 import courseModel from "../model/courses.js";
 import chapterModel from "../model/chapters.js";
+import courseReviewModel from "../model/courseReview.js";
 import { cloudinary } from "../config/cloudinary.js";
+import mongoose from "mongoose";
+import paymentModel from "../model/payment.js";
+const { ObjectId } = mongoose.Types;
 
 const courseDetails = async (req, res) => {
   const course = req.query.courseId;
   try {
-    const courseData = await courseModel.findOne({ _id: course });
+    const courseData = await courseModel.findOne({ _id: course }).populate({
+      path: "reviews",
+      populate: {
+        path: "user",
+      },
+    });
     if (!courseData) {
       res.status(404).json({ message: "Invalid Request" });
       return;
@@ -114,7 +123,15 @@ const listCourses = async (req, res) => {
 const courseDetailsForUser = async (req, res) => {
   try {
     const courseId = req.query.courseId;
-    const course = await courseModel.findOne({ _id: courseId });
+    const course = await courseModel.findOne({ _id: courseId }).populate({
+      path: "reviews",
+      populate: {
+        path: "user",
+      },
+    });
+    if (!course) {
+      return res.status(404).json({ message: "Course not found" });
+    }
     const chapter = await chapterModel.find({ course: courseId });
     return res.status(200).json({ message: "success", course, chapter });
   } catch (err) {
@@ -154,6 +171,64 @@ const editCourse = async (req, res) => {
   }
 };
 
+const dashboardData = async (req, res) => {
+  try {
+    const id = req.query.id;
+    const student = await paymentModel.find({ tutor: id });
+    const studentCount = student.length;
+    const course = await courseModel.find({ tutor: id });
+    const courseCount = course.length;
+    const publicCourses = await courseModel.find({
+      tutor: id,
+      isCompleted: true,
+    });
+    const publicCourseCount = publicCourses.length;
+    const payments = await paymentModel.find({ tutor: id });
+    const totalRevenue = payments.reduce(
+      (total, payment) => total + payment.price,
+      0
+    );
+    const tableData = await paymentModel
+      .find({ tutor: id })
+      .populate("course user")
+      .sort({ createdAt: -1 })
+      .limit(3);
+
+    return res.status(200).json({
+      message: "success",
+      studentCount,
+      courseCount,
+      publicCourseCount,
+      totalRevenue,
+      tableData,
+    });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+const handleReview = async (req, res) => {
+  try {
+    console.log(req.body);
+    const { rating, review, courseId, userId } = req.body;
+    const user = new mongoose.Types.ObjectId(userId);
+    console.log("user", user);
+    const newReview = courseReviewModel({
+      rating,
+      review,
+      user,
+    });
+
+    const newAddedReview = await newReview.save();
+    await courseModel.findByIdAndUpdate(courseId, {
+      $push: { reviews: newAddedReview._id },
+    });
+    res.status(200).json({ message: "review added" });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
 export {
   courseDetails,
   createChapter,
@@ -163,4 +238,6 @@ export {
   chapterDetails,
   deleteChapter,
   editCourse,
+  dashboardData,
+  handleReview,
 };

@@ -43,13 +43,12 @@ const courses = new Schema({
     type: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     default: [],
   },
-  isShow: {
-    type: Boolean,
-    default: false,
-  },
-  review: {
-    type: Array,
-  },
+  reviews: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "courseReview",
+    },
+  ],
 });
 
 export default model("course", courses);

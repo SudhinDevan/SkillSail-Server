@@ -22,7 +22,7 @@ const blogs = new Schema({
   content: {
     type: String,
     required: true,
-  },
+  }, 
 });
 
 export default model("blog", blogs);

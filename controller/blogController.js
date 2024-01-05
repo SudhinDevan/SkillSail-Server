@@ -95,4 +95,42 @@ const editBlog = async (req, res) => {
   }
 };
 
-export { createBlog, blogListing, blogDetials, editBlog };
+const displayBlogs = async (req, res) => {
+  try {
+    const blogs = await blogModel.find();
+    return res
+      .status(200)
+      .json({ message: "blogs fetched successfully", blogs });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+const deleteBlog = async (req, res) => {
+  try {
+    const { blogId } = req.params;
+    const blog = await blogModel.findByIdAndDelete(blogId);
+    return res.status(200).json({ message: "Deleted successfully", blog });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+const dashboardBlog = async (req, res) => {
+  try {
+    const blog = await blogModel.find({}).sort({ createdAt: -1 }).limit(2);
+    return res.status(200).json({ message: "Blog fetched successfully", blog });
+  } catch (error) {
+    console.error(error);
+  }
+};
+
+export {
+  createBlog,
+  blogListing,
+  blogDetials,
+  editBlog,
+  displayBlogs,
+  dashboardBlog,
+  deleteBlog,
+};

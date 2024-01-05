@@ -15,6 +15,7 @@ import {
   chapterListing,
   courseDetails,
   createChapter,
+  dashboardData,
   deleteChapter,
   editCourse,
 } from "../controller/courseController.js";
@@ -23,6 +24,7 @@ import {
   blogDetials,
   blogListing,
   createBlog,
+  deleteBlog,
   editBlog,
 } from "../controller/blogController.js";
 
@@ -41,6 +43,8 @@ router.get("/blogDetails", blogDetials);
 router.post("/editBlog", editBlog);
 router.put("/courseDetails/edit", editCourse);
 router.delete("/courseDetails/chapter/:chapterId", deleteChapter);
+router.delete("/deleteBlog/:blogId", deleteBlog);
 router.post("/studentListing", userListing);
+router.get("/dashboardData", dashboardData);
 
 export default router;

@@ -21,7 +21,6 @@ const signIn = async (req, res) => {
   }
   if (admin.role === 1000) {
     const passwordVerify = bcrypt.compare(password, admin.password);
-    console.log(passwordVerify);
   }
   if (!passwordVerify) {
     return res.status(404).json({ message: "Invalid Credentials" });
