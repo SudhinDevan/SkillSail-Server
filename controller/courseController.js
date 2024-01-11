@@ -6,7 +6,7 @@ import mongoose from "mongoose";
 import paymentModel from "../model/payment.js";
 const { ObjectId } = mongoose.Types;
 
-const courseDetails = async (req, res) => {
+const courseDetails = async (req, res, next) => {
   const course = req.query.courseId;
   try {
     const courseData = await courseModel.findOne({ _id: course }).populate({
@@ -20,12 +20,12 @@ const courseDetails = async (req, res) => {
       return;
     }
     return res.status(200).json({ message: "success", courseData });
-  } catch (err) {
-    console.log(err.message);
+  }catch(err){
+    next(err);
   }
 };
 
-const createChapter = async (req, res) => {
+const createChapter = async (req, res, next) => {
   try {
     const data = req.body;
     const course = await courseModel.findOne({ _id: data.inputs.courseId });
@@ -50,18 +50,12 @@ const createChapter = async (req, res) => {
       await chapter.save();
       res.status(201).json({ message: "Chapter saved successfully", chapter });
     }
-  } catch (error) {
-    console.error(error);
-    if (error.name === "ValidationError") {
-      return res
-        .status(400)
-        .json({ error: "Validation Error", details: error.errors });
-    }
-    res.status(500).json({ error: "Internal Server Error" });
+  }catch(err){
+    next(err);
   }
 };
 
-const chapterListing = async (req, res) => {
+const chapterListing = async (req, res, next) => {
   try {
     const chapter = req.query.courseId;
     const chapterData = await chapterModel.find({ course: chapter });
@@ -71,11 +65,11 @@ const chapterListing = async (req, res) => {
     }
     return res.status(200).json({ message: "success", chapterData });
   } catch (err) {
-    console.log(err.message);
+    next(err);
   }
 };
 
-const chapterDetails = async (req, res) => {
+const chapterDetails = async (req, res, next) => {
   try {
     const chapter = req.query.chapterId;
     const chapterDetails = await chapterModel.findOne({ _id: chapter });
@@ -84,11 +78,11 @@ const chapterDetails = async (req, res) => {
     }
     return res.status(200).json({ message: "success", chapterDetails });
   } catch (err) {
-    console.log(err.message);
+    next(err);
   }
 };
 
-const deleteChapter = async (req, res) => {
+const deleteChapter = async (req, res, next) => {
   try {
     const { chapterId } = req.params;
 
@@ -106,21 +100,22 @@ const deleteChapter = async (req, res) => {
 
     return res.status(200).json({ message: "Successfully deleted" });
   } catch (err) {
-    console.error("Error deleting chapter:", err);
-    return res.status(500).json({ message: "Internal Server Error" });
+    next(err);
   }
 };
 
-const listCourses = async (req, res) => {
+const listCourses = async (req, res, next) => {
   try {
-    const courses = await courseModel.find().sort({ createdAt: -1 });
+    const courses = await courseModel
+      .find({ isCompleted: true })
+      .sort({ createdAt: -1 });
     return res.status(200).json({ message: "success", courses });
   } catch (err) {
-    console.log(err.message);
+    next(err);
   }
 };
 
-const courseDetailsForUser = async (req, res) => {
+const courseDetailsForUser = async (req, res, next) => {
   try {
     const courseId = req.query.courseId;
     const course = await courseModel.findOne({ _id: courseId }).populate({
@@ -135,11 +130,11 @@ const courseDetailsForUser = async (req, res) => {
     const chapter = await chapterModel.find({ course: courseId });
     return res.status(200).json({ message: "success", course, chapter });
   } catch (err) {
-    return res.status(400).json({ err });
+    next(err);
   }
 };
 
-const editCourse = async (req, res) => {
+const editCourse = async (req, res, next) => {
   try {
     const details = req.body;
     let file;
@@ -165,13 +160,12 @@ const editCourse = async (req, res) => {
     );
 
     return res.status(200).json({ message: "Successfully Updated", course });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Internal server error" });
+  } catch (err) {
+    next(err);
   }
 };
 
-const dashboardData = async (req, res) => {
+const dashboardData = async (req, res, next) => {
   try {
     const id = req.query.id;
     const student = await paymentModel.find({ tutor: id });
@@ -202,12 +196,12 @@ const dashboardData = async (req, res) => {
       totalRevenue,
       tableData,
     });
-  } catch (error) {
-    console.log(error);
+  } catch (err) {
+    next(err);
   }
 };
 
-const handleReview = async (req, res) => {
+const handleReview = async (req, res, next) => {
   try {
     console.log(req.body);
     const { rating, review, courseId, userId } = req.body;
@@ -224,8 +218,8 @@ const handleReview = async (req, res) => {
       $push: { reviews: newAddedReview._id },
     });
     res.status(200).json({ message: "review added" });
-  } catch (error) {
-    console.log(error);
+  } catch (err) {
+    next(err);
   }
 };
 

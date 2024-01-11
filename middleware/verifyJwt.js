@@ -9,7 +9,7 @@ const verifyJWT = (req, res, next) => {
   if (!authHeader?.startsWith("Bearer ")) return res.sendStatus(401);
   const token = authHeader.split(" ")[1];
   jwt.verify(token, accessTokenKey, (err, decoded) => {
-    if (err) return res.sendStatus(403);
+    if (err) res.sendStatus(403);
     req.userId = decoded.userId;
     next();
   });

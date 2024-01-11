@@ -2,7 +2,7 @@ import blogModel from "../model/blogs.js";
 import userModel from "../model/userSchema.js";
 import { cloudinary } from "../config/cloudinary.js";
 
-const createBlog = async (req, res) => {
+const createBlog = async (req, res, next) => {
   try {
     const data = req.body;
     if (!data || !data.inputs || !data.image) {
@@ -37,25 +37,22 @@ const createBlog = async (req, res) => {
       });
     }
   } catch (err) {
-    console.error("Unexpected error:", err.message);
-    return res
-      .status(500)
-      .json({ error: true, message: "Internal Server Error" });
+    next(err);
   }
 };
 
-const blogListing = async (req, res) => {
+const blogListing = async (req, res, next) => {
   try {
     const userEmail = req.query.email;
     const user = await userModel.findOne({ email: userEmail });
     const blogList = await blogModel.find({ author: user._id });
     res.status(200).json({ message: "blogs fetched successfully", blogList });
-  } catch (error) {
-    res.json(error);
+  } catch (err) {
+    next(err);
   }
 };
 
-const blogDetials = async (req, res) => {
+const blogDetials = async (req, res, next) => {
   try {
     const blogId = req.query.blogId;
     const blogDetails = await blogModel
@@ -64,12 +61,12 @@ const blogDetials = async (req, res) => {
     return res
       .status(200)
       .json({ message: "blog fetched successfully", blogDetails });
-  } catch (error) {
-    console.log(error);
+  } catch (err) {
+    next(err);
   }
 };
 
-const editBlog = async (req, res) => {
+const editBlog = async (req, res, next) => {
   try {
     const data = req.body;
     let file;
@@ -90,23 +87,23 @@ const editBlog = async (req, res) => {
       { new: true }
     );
     return res.status(200).json({ message: "Edited Successfully", blog });
-  } catch (error) {
-    console.log(error);
+  } catch (err) {
+    next(err);
   }
 };
 
-const displayBlogs = async (req, res) => {
+const displayBlogs = async (req, res, next) => {
   try {
     const blogs = await blogModel.find();
     return res
       .status(200)
       .json({ message: "blogs fetched successfully", blogs });
-  } catch (error) {
-    console.log(error);
+  } catch (err) {
+    next(err);
   }
 };
 
-const deleteBlog = async (req, res) => {
+const deleteBlog = async (req, res, next) => {
   try {
     const { blogId } = req.params;
     const blog = await blogModel.findByIdAndDelete(blogId);
@@ -116,12 +113,12 @@ const deleteBlog = async (req, res) => {
   }
 };
 
-const dashboardBlog = async (req, res) => {
+const dashboardBlog = async (req, res, next) => {
   try {
     const blog = await blogModel.find({}).sort({ createdAt: -1 }).limit(2);
     return res.status(200).json({ message: "Blog fetched successfully", blog });
-  } catch (error) {
-    console.error(error);
+  } catch (err) {
+    next(err);
   }
 };
 

@@ -2,7 +2,7 @@ import userModel from "../model/userSchema.js";
 import courseModel from "../model/courses.js";
 import { cloudinary } from "../config/cloudinary.js";
 
-const createCourse = async (req, res) => {
+const createCourse = async (req, res, next) => {
   try {
     const data = req.body;
     if (!data || !data.inputs || !data.image) {
@@ -41,14 +41,11 @@ const createCourse = async (req, res) => {
       });
     }
   } catch (err) {
-    console.error("Unexpected error:", err.message);
-    return res
-      .status(500)
-      .json({ error: true, message: "Internal Server Error" });
+    next(err);
   }
 };
 
-const coursesListing = async (req, res) => {
+const coursesListing = async (req, res, next) => {
   try {
     const userEmail = req.query.email;
     const user = await userModel.findOne({ email: userEmail });
@@ -60,12 +57,12 @@ const coursesListing = async (req, res) => {
     res
       .status(200)
       .json({ message: "courses fetched successfully", coursesList });
-  } catch (error) {
-    res.json(error);
+  } catch (err) {
+    next(err);
   }
 };
 
-const publicCoursesListing = async (req, res) => {
+const publicCoursesListing = async (req, res, next) => {
   try {
     const userEmail = req.query.email;
     const user = await userModel.findOne({ email: userEmail });
@@ -77,17 +74,19 @@ const publicCoursesListing = async (req, res) => {
     res
       .status(200)
       .json({ message: "courses fetched successfully", coursesList });
-  } catch (error) {
-    res.json(error);
+  } catch (err) {
+    next(err);
   }
 };
 
-const userListing = async (req, res) => {
+const userListing = async (req, res, next) => {
   try {
-    const { id } = req.body;
-    const tutorCourses = await courseModel
-      .find({ tutor: id })
-      .populate("students");
+    const { id, currentPage } = req.body;
+    console.log(currentPage);
+    const tutorCourses = await courseModel.find({ tutor: id }).populate({
+      path: "students",
+      ref: "user",
+    });
     const studentsWithCourses = [];
     // Iterate through the courses and extract students with their enrolled courses
     tutorCourses.forEach((course) => {
@@ -108,16 +107,12 @@ const userListing = async (req, res) => {
       message: "Student list with enrolled courses successfully fetched",
       studentsWithCourses,
     });
-  } catch (error) {
-    console.error("Error in userListing:", error);
-    if (error.name === "CastError") {
-      return res.status(400).json({ error: "Invalid ID format" });
-    }
-    return res.status(500).json({ error: "Internal Server Error" });
+  } catch (err) {
+    next(err);
   }
 };
 
-const tutorEditImage = async (req, res) => {
+const tutorEditImage = async (req, res, next) => {
   try {
     const { email, file } = req.body;
     let dp;
@@ -135,22 +130,118 @@ const tutorEditImage = async (req, res) => {
       .status(200)
       .json({ message: "Successfully updated display image", user });
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    next(err);
   }
 };
 
-const tutorProfileDetails = async (req, res) => {
+const tutorProfileDetails = async (req, res, next) => {
   try {
     const email = req.query.email;
     const user = await userModel
       .findOne({ email: email })
       .populate("appliedCourses");
-    return res.status(200).json({ message: "success", user });
+    const course = await courseModel
+      .find({ tutor: user._id })
+      .sort({ createdAt: -1 });
+    return res.status(200).json({ message: "success", user, course });
   } catch (err) {
-    return res.status(400).json({ message: "error fetching data" });
+    next(err);
   }
 };
+
+const test = async (req, res) => {
+  const search = req.query.searchItem;
+  const id = req.query.id;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+
+  const tutorCourses = await courseModel
+    .find({ tutor: id })
+    .populate({
+      path: "students",
+      ref: "user",
+    })
+    .skip((page - 1) * limit)
+    .limit(limit);
+  const studentsWithCourses = [];
+
+  const searchRegex = new RegExp(search, "i");
+
+  tutorCourses.forEach((course) => {
+    course.students.forEach((student) => {
+      if (searchRegex.test(student.email)) {
+        studentsWithCourses.push({
+          student: student,
+          course: {
+            _id: course._id,
+            courseName: course.courseName,
+            price: course.price,
+          },
+        });
+      }
+    });
+  });
+
+  return res.status(200).json({
+    message: "Student list with enrolled courses successfully fetched",
+    studentsWithCourses,
+  });
+};
+
+////////////////////////////////////////////////////////
+// const getMyCourse = async (req, res) => {
+//   try {
+//     const userId = req.userId;
+// const courses = await courseModel
+//   .find({ users: userId })
+//   .populate("category");
+
+// const ITEMS_PER_PAGE = 6;
+// let page = +req.query.page || 1;
+// const search = req.query.search || "";
+// const search = req.query.search !== 'undefined' ? req.query.search : "";
+//     let search = "";
+//     if (req.query.search !== "undefined") {
+//       search = req.query.search;
+//       page = 1;
+//     }
+
+//     const query = {
+//       users: userId,
+//       title: { $regex: new RegExp(`^${search}`, "i") },
+//     };
+
+//     const allCourses = await courseModel.find(query).populate("category");
+
+//     const startIndex = (page - 1) * ITEMS_PER_PAGE;
+//     const lastIndex = page * ITEMS_PER_PAGE;
+
+//     const results = {};
+//     results.totalCourse = allCourses.length;
+//     results.pageCount = Math.ceil(allCourses.length / ITEMS_PER_PAGE);
+
+//     if (lastIndex < allCourses.length) {
+//       results.next = {
+//         page: page + 1,
+//       };
+//     }
+
+//     if (startIndex > 0) {
+//       results.prev = {
+//         page: page - 1,
+//       };
+//     }
+
+//     results.page = page - 1;
+//     results.courses = allCourses.slice(startIndex, lastIndex);
+
+//     res.status(200).json({ results });
+//   } catch (error) {
+//     console.log(error);
+//   }
+// };
+///////////////////////////////////////////////////
+// };
 
 export {
   createCourse,
@@ -159,4 +250,5 @@ export {
   tutorEditImage,
   tutorProfileDetails,
   publicCoursesListing,
+  test,
 };

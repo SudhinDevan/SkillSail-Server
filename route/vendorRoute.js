@@ -5,6 +5,7 @@ import {
   coursesListing,
   createCourse,
   publicCoursesListing,
+  test,
   tutorEditImage,
   tutorProfileDetails,
   userListing,
@@ -46,5 +47,6 @@ router.delete("/courseDetails/chapter/:chapterId", deleteChapter);
 router.delete("/deleteBlog/:blogId", deleteBlog);
 router.post("/studentListing", userListing);
 router.get("/dashboardData", dashboardData);
+router.get("/test", test)
 
 export default router;

@@ -1,6 +1,7 @@
 import User from "../model/userSchema.js";
 import coursesModel from "../model/courses.js";
 import OtpModel from "../model/otp.js";
+import paymentModel from "../model/payment.js";
 import bcrypt, { genSalt } from "bcrypt";
 import { cloudinary } from "../config/cloudinary.js";
 import { verifyEmail } from "../config/sendMail.js";
@@ -11,7 +12,7 @@ dotenv.config();
 let accessTokenKey = process.env.JWT_SECRET_KEY;
 let refreshTokenKey = process.env.JWT_SECURE_KEY;
 
-const signUp = async (req, res) => {
+const signUp = async (req, res, next) => {
   try {
     const { name, email, phone, password, isAccess, role, verifyDocument } =
       req.body;
@@ -50,47 +51,60 @@ const signUp = async (req, res) => {
       user: user,
     });
   } catch (err) {
-    console.error(err.message);
-    return res.status(500).json({ message: "Internal Server Error" });
+    next(err);
   }
 };
 
-const login = async (req, res) => {
-  let existingUser = req.user;
-  if (existingUser.isAccess) {
-    const accessToken = jwt.sign({ 'userId': existingUser._id }, accessTokenKey, {
-      expiresIn: "30s",
-    });
+const login = async (req, res, next) => {
+  try {
+    let existingUser = req.user;
+    if (existingUser.isAccess) {
+      const accessToken = jwt.sign(
+        { userId: existingUser._id },
+        accessTokenKey,
+        {
+          expiresIn: "30s",
+        }
+      );
 
-    const refreshToken = jwt.sign({ 'userId': existingUser._id }, refreshTokenKey, {
-      expiresIn: "1d",
-    });
+      const refreshToken = jwt.sign(
+        { userId: existingUser._id },
+        refreshTokenKey,
+        {
+          expiresIn: "1d",
+        }
+      );
 
-    res.cookie("jwt", refreshToken, {
-      httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000,
-    });
+      res.cookie("jwt", refreshToken, {
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000,
+      });
 
-    existingUser.refreshToken = refreshToken;
-    await existingUser.save();
+      existingUser.refreshToken = refreshToken;
+      await existingUser.save();
 
-    const sanitizedUser = {
-      id: existingUser.id,
-      name: existingUser.name,
-      phone: existingUser.phone,
-      email: existingUser.email,
-      role: existingUser.role,
-    };
+      const sanitizedUser = {
+        id: existingUser.id,
+        name: existingUser.name,
+        phone: existingUser.phone,
+        email: existingUser.email,
+        role: existingUser.role,
+      };
 
-    res
-      .status(200)
-      .json({ message: "login successfull", user: sanitizedUser, accessToken });
-  } else {
-    return res.status(401).json({ message: "Access Denied" });
+      res.status(200).json({
+        message: "login successfull",
+        user: sanitizedUser,
+        accessToken,
+      });
+    } else {
+      return res.status(401).json({ message: "Access Denied" });
+    }
+  } catch (err) {
+    next(err);
   }
 };
 
-const handleRefreshToken = async (req, res) => {
+const handleRefreshToken = async (req, res, next) => {
   try {
     const cookies = req.cookies;
     if (!cookies?.jwt) return res.sendStatus(401);
@@ -102,62 +116,50 @@ const handleRefreshToken = async (req, res) => {
     jwt.verify(refreshToken, refreshTokenKey, (err, decoded) => {
       if (err || !userData._id.equals(decoded.userId))
         return res.sendStatus(403);
-      const accessToken = jwt.sign({ 'userId': decoded.userId }, accessTokenKey, {
+      const accessToken = jwt.sign({ userId: decoded.userId }, accessTokenKey, {
         expiresIn: "30s",
       });
       res.json({ accessToken });
     });
-  } catch (error) {
-    console.log(error);
+  } catch (err) {
+    next(err);
   }
 };
 
-const deleteOtp = async (req, res) => {
-  try {
-    await OtpModel.deleteMany({
-      createdAt: { $lt: new Date(Date.now() - 2 * 60 * 1000) },
-    });
-  } catch (error) {
-    console.error("Error deleting expired OTP documents:", error);
-  }
-};
-
-setInterval(deleteOtp, 60 * 1000);
-
-const verifyOtp = async (req, res) => {
-  const { data, otpValues } = req.body;
-  const user = await OtpModel.findOne({ email: data.email });
-  const otpString = otpValues.join("");
-  if (user.otp == otpString) {
-    const updateUser = await User.findOneAndUpdate(
-      { email: user.email },
-      { $set: { isVerified: true } }
-    );
-    return res
-      .status(200)
-      .json({ message: "successfully verified", updateUser });
-  } else {
-    return res.status(201).json({ message: "Incorrect OTP" });
-  }
-};
-
-// const userLogout = async (req, res) => {
-//   const userId = req.query.id;
-//   const user = await User.findOneAndUpdate(
-//     { _id: userId },
-//     { $set: { refreshToken: "" } }
-//   );
-//   res
-//     .cookie("token", "", {
-//       httpOnly: true,
-//       expires: new Date(0),
-//       secure: true,
-//       sameSite: "none",
-//     })
-//     .json({ message: "logged out", error: false });
+// const deleteOtp = async (req, res, next) => {
+//   try {
+//     await OtpModel.deleteMany({
+//       createdAt: { $lt: new Date(Date.now() - 2 * 60 * 1000) },
+//     });
+//   } catch (err) {
+//     next(err);
+//   }
 // };
 
-const userLogout = async (req, res) => {
+// setInterval(deleteOtp, 60 * 1000);
+
+const verifyOtp = async (req, res, next) => {
+  try {
+    const { data, otpValues } = req.body;
+    const user = await OtpModel.findOne({ email: data.email });
+    const otpString = otpValues.join("");
+    if (user.otp == otpString) {
+      const updateUser = await User.findOneAndUpdate(
+        { email: user.email },
+        { $set: { isVerified: true } }
+      );
+      return res
+        .status(200)
+        .json({ message: "successfully verified", updateUser });
+    } else {
+      return res.status(201).json({ message: "Incorrect OTP" });
+    }
+  } catch (err) {
+    next(err);
+  }
+};
+
+const userLogout = async (req, res, next) => {
   try {
     const cookies = req.cookies;
     if (!cookies?.jwt) return res.sendStatus(204);
@@ -173,12 +175,12 @@ const userLogout = async (req, res) => {
 
     res.clearCookie("jwt", { httpOnly: true });
     res.sendStatus(204);
-  } catch (error) {
-    console.log(error);
+  } catch (err) {
+    next(err);
   }
 };
 
-const editProfile = async (req, res) => {
+const editProfile = async (req, res, next) => {
   const data = req.body;
   try {
     let updatedObject = {};
@@ -194,12 +196,12 @@ const editProfile = async (req, res) => {
     );
     const updatedUser = await User.findOne({ email: user.email });
     return res.status(200).json({ message: "profile edited", updatedUser });
-  } catch (error) {
-    res.status(400).json(error.message);
+  } catch (err) {
+    next(err);
   }
 };
 
-const editImage = async (req, res) => {
+const editImage = async (req, res, next) => {
   try {
     const { email, file } = req.body;
     let dp;
@@ -217,12 +219,11 @@ const editImage = async (req, res) => {
       .status(200)
       .json({ message: "Successfully updated display image", user });
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ error: "Internal server error" });
+    next(err);
   }
 };
 
-const profileDetails = async (req, res) => {
+const profileDetails = async (req, res, next) => {
   try {
     const email = req.query.email;
     const user = await User.findOne({ email: email }).populate(
@@ -230,11 +231,11 @@ const profileDetails = async (req, res) => {
     );
     return res.status(200).json({ message: "success", user });
   } catch (err) {
-    return res.status(400).json({ message: "error fetching data" });
+    next(err);
   }
 };
 
-const userCourses = async (req, res) => {
+const userCourses = async (req, res, next) => {
   try {
     const { id } = req.body;
     const user = await User.findById(id);
@@ -250,12 +251,12 @@ const userCourses = async (req, res) => {
     } else {
       return res.status(201).json({ message: "No courses purchased" });
     }
-  } catch (error) {
-    console.log(error);
+  } catch (err) {
+    next(err);
   }
 };
 
-const forgotPassword = async (req, res) => {
+const forgotPassword = async (req, res, next) => {
   try {
     const { email } = req.body;
     const user = await User.findOne({ email: email });
@@ -281,25 +282,45 @@ const forgotPassword = async (req, res) => {
     return res
       .status(200)
       .json({ message: "verify your account", user: emailRecipients });
-  } catch (error) {
-    console.log(error);
+  } catch (err) {
+    next(err);
   }
 };
 
-const changePassword = async (req, res) => {
-  const data = req.body;
-  const user = await User.findById(data.id);
-  if (!user) {
-    return res.status(404).json({ message: "User not found" });
+const changePassword = async (req, res, next) => {
+  try {
+    const data = req.body;
+    const user = await User.findById(data.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const saltRounds = 10;
+    const genSalt = bcrypt.genSaltSync(saltRounds);
+    const newPassword = bcrypt.hashSync(data.password, genSalt);
+
+    user.password = newPassword;
+    await user.save();
+
+    res.status(200).json({ message: "Password changed Successfully" });
+  } catch (err) {
+    next(err);
   }
-  const saltRounds = 10;
-  const genSalt = bcrypt.genSaltSync(saltRounds);
-  const newPassword = bcrypt.hashSync(data.password, genSalt);
+};
 
-  user.password = newPassword;
-  await user.save();
-
-  res.status(200).json({ message: "Password changed Successfully" });
+const transactions = async (req, res, next) => {
+  try {
+    const id = req.query.id;
+    const paymentHistory = await paymentModel
+      .find({ user: id })
+      .populate("user")
+      .populate("tutor")
+      .populate("course");
+    return res
+      .status(200)
+      .json({ message: "Transactions fetched successfully", paymentHistory });
+  } catch (err) {
+    next(err);
+  }
 };
 
 export {
@@ -314,4 +335,5 @@ export {
   userCourses,
   forgotPassword,
   changePassword,
+  transactions,
 };

@@ -11,7 +11,7 @@ let instance = new Razorpay({
   key_secret: process.env.RAZOR_KEY_SECRET,
 });
 
-export async function paymentOrder(req, res) {
+export async function paymentOrder(req, res, next) {
   try {
     const { price } = req.body;
     var options = {
@@ -26,12 +26,12 @@ export async function paymentOrder(req, res) {
         res.json({ err: false, order });
       }
     });
-  } catch (error) {
-    res.json({ err: true, message: "server error", error });
+  } catch (err) {
+    next(err);
   }
 }
 
-export async function verifyPayment(req, res) {
+export async function verifyPayment(req, res, next) {
   try {
     const { response, userId, courseId } = req.body;
 
@@ -71,8 +71,7 @@ export async function verifyPayment(req, res) {
         message: "payment verification failed",
       });
     }
-  } catch (error) {
-    console.log(error);
-    res.json({ error, err: true, message: "somethin went wrong" });
+  } catch (err) {
+    next(err);
   }
 }

@@ -5,14 +5,29 @@ import userRoute from "./route/userRoute.js";
 import adminRoute from "./route/adminRoute.js";
 import authRoute from "./route/authRoute.js";
 import vendorRoute from "./route/vendorRoute.js";
+import chatRoute from "./route/chatRoute.js";
 import { verifyJWT } from "./middleware/verifyJwt.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import verifyUserRole from "./middleware/verifyUserAccess.js";
 import verifyTutorRole from "./middleware/verifyTutorAccess.js";
 import verifyAdminRole from "./middleware/verifyAdminAccess.js";
+import ErrorHandler from "./middleware/errorHandler.js";
+import { createServer } from "http";
+import { Server } from "socket.io";
+import { configureSocket } from "./config/socket.js";
 
 const app = express();
+const server = createServer(app);
+const io = new Server(server, {
+  transports: ["websocket", "polling"],
+  cors: {
+    origin: ["http://localhost:5173"],
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+});
+configureSocket(io);
 dotenv.config();
 
 app.use(
@@ -32,16 +47,18 @@ app.use("/", authRoute);
 
 app.use(verifyJWT);
 
+app.use("/chat", chatRoute);
 app.use("/user", verifyUserRole, userRoute);
 app.use("/tutor", verifyTutorRole, vendorRoute);
 app.use("/admin", verifyAdminRole, adminRoute);
+app.use(ErrorHandler);
 
 const db = process.env.DATABASE;
 
 mongoose
   .connect(db)
   .then(() => {
-    app.listen(port);
+    server.listen(port);
     console.log("Database connected and listening on port:", port);
   })
   .catch((err) => console.log(err));
