@@ -22,7 +22,7 @@ const server = createServer(app);
 const io = new Server(server, {
   transports: ["websocket", "polling"],
   cors: {
-    origin: ["http://localhost:5173"],
+    origin: ["https://skillsail.vercel.app/"],
     methods: ["GET", "POST"],
     credentials: true,
   },
@@ -31,7 +31,11 @@ configureSocket(io);
 dotenv.config();
 
 app.use(
-  cors({ credentials: true, origin: ["http://localhost:5173"], origin: true })
+  cors({
+    credentials: true,
+    origin: ["https://skillsail.vercel.app/"],
+    origin: true,
+  })
 );
 
 app.use(cookieParser());
