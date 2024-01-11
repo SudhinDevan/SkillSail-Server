@@ -35,15 +35,14 @@ function generateUniqueRoomId(senderId, recieverId) {
 
 const sendMessage = async (data) => {
   try {
-    const { textMessage, conversationId, recipientId, token } = data;
+    const { textMessage, conversationId, recipientId, token, userId } = data;
     console.log("conversationId", data);
-    const decodedToken = jwt.verify(token, process.env.JWT_SECRET_KEY);
-
+    // const decodedToken = jwt.verify(token, process.env.JWT_SECRET_KEY);
     const existingChat = await ChatModel.findOne({ conversationId });
 
     if (existingChat) {
       const newMessage = new messageModel({
-        sender: decodedToken.userId,
+        sender: userId,
         content: textMessage,
         chat: existingChat._id,
       });
@@ -62,7 +61,7 @@ const sendMessage = async (data) => {
     const createdChat = await newChat.save();
 
     const newMessage = new messageModel({
-      sender: decodedToken.userId,
+      sender: userId,
       content: textMessage,
       chat: createdChat._id,
     });

@@ -82,11 +82,11 @@ const publicCoursesListing = async (req, res, next) => {
 const userListing = async (req, res, next) => {
   try {
     const { id, currentPage } = req.body;
-    console.log(currentPage);
     const tutorCourses = await courseModel.find({ tutor: id }).populate({
       path: "students",
-      ref: "user",
+      select: "name email",
     });
+    const limit = 3;
     const studentsWithCourses = [];
     // Iterate through the courses and extract students with their enrolled courses
     tutorCourses.forEach((course) => {
@@ -102,10 +102,17 @@ const userListing = async (req, res, next) => {
         });
       });
     });
+    const totalCount = studentsWithCourses.length;
+    console.log(studentsWithCourses);
+    console.log(studentsWithCourses.length);
+    const filteredData = studentsWithCourses.slice(
+      (currentPage - 1) * limit,
+      currentPage * limit
+    );
 
     return res.status(200).json({
       message: "Student list with enrolled courses successfully fetched",
-      studentsWithCourses,
+      tutorCourses: filteredData, totalCount: totalCount
     });
   } catch (err) {
     next(err);
