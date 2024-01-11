@@ -63,7 +63,7 @@ const login = async (req, res, next) => {
         { userId: existingUser._id },
         accessTokenKey,
         {
-          expiresIn: "30s",
+          expiresIn: "30m",
         }
       );
 
@@ -117,7 +117,7 @@ const handleRefreshToken = async (req, res, next) => {
       if (err || !userData._id.equals(decoded.userId))
         return res.sendStatus(403);
       const accessToken = jwt.sign({ userId: decoded.userId }, accessTokenKey, {
-        expiresIn: "30s",
+        expiresIn: "30m",
       });
       res.json({ accessToken });
     });

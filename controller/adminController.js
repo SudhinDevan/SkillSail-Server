@@ -17,7 +17,7 @@ const signIn = async (req, res, next) => {
       const passwordVerify = await bcrypt.compare(password, user.password);
       if (passwordVerify) {
         const accessToken = jwt.sign({ userId: user._id }, jwtPrivateKey, {
-          expiresIn: "30s",
+          expiresIn: "30m",
         });
 
         const refreshToken = jwt.sign({ userId: user._id }, jwtSecureKey, {
