@@ -16,29 +16,26 @@ import ErrorHandler from "./middleware/errorHandler.js";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import { configureSocket } from "./config/socket.js";
+import { corsOptions } from "./config/corsOptions.js";
+import { credentials } from "./middleware/credentials.js";
+import { allowedOrigins } from "./config/allowedOrigins.js";
 
 const app = express();
 const server = createServer(app);
 const io = new Server(server, {
+  maxHttpBufferSize: 1e8 ,
   transports: ["websocket", "polling"],
   cors: {
-    origin: ["https://skillsail.vercel.app/"],
+    origin: allowedOrigins,
     methods: ["GET", "POST"],
     credentials: true,
-    allowedHeaders: ['Content-Type'],
   },
 });
 configureSocket(io);
 dotenv.config();
 
-app.use(
-  cors({
-    credentials: true,
-    origin: ["https://skillsail.vercel.app/"],
-    origin: true,
-    allowedHeaders: ['Content-Type'],
-  })
-);
+app.use(credentials)
+app.use(cors(corsOptions));
 
 app.use(cookieParser());
 app.use(
