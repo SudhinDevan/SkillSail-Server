@@ -276,7 +276,7 @@ const forgotPassword = async (req, res, next) => {
       email: user.email,
       OTP,
     };
-    console.log("otp: ", OTP);
+    // console.log("otp: ", OTP);
     await otpdetails.save();
     const verify = await verifyEmail(emailRecipients);
     return res

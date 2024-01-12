@@ -29,14 +29,14 @@ function generateUniqueRoomId(senderId, recieverId) {
   const sortedIds = [senderId, recieverId].sort();
   const combineIds = sortedIds.join("");
   const roomId = crypto.createHash("sha1").update(combineIds).digest("hex");
-  console.log("generateUniqueRoomId");
+  // console.log("generateUniqueRoomId");
   return roomId;
 }
 
 const sendMessage = async (data) => {
   try {
     const { textMessage, conversationId, recipientId, token, userId } = data;
-    console.log("conversationId", data);
+    // console.log("conversationId", data);
     // const decodedToken = jwt.verify(token, process.env.JWT_SECRET_KEY);
     const existingChat = await ChatModel.findOne({ conversationId });
 
@@ -80,7 +80,7 @@ const allMessages = async (req, res) => {
     const userId = req.userId;
 
     let conversationId = generateUniqueRoomId(userId, recipientId);
-    console.log("conversationId", conversationId);
+    // console.log("conversationId", conversationId);
 
     const existingChat = await ChatModel.findOne({ conversationId });
 
@@ -105,7 +105,7 @@ const getAllTeachers = async (req, res) => {
     const teacherIds = await courses.distinct("tutor", { students: user });
 
     let teachers = [];
-    console.log(teacherIds);
+    // console.log(teacherIds);
 
     for (const id of teacherIds) {
       const teacher = await userModel

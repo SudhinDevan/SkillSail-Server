@@ -2,14 +2,14 @@ import { sendMessage } from "../controller/chatController.js";
 
 const configureSocket = (io) => {
   io.on("connection", (socket) => {
-    console.log("socket connected", socket);
+    // console.log("socket connected", socket);
 
     socket.on("joinRoom", (conversationId) => {
       socket.join(conversationId);
     });
 
     socket.on("sendMessage", (data) => {
-      console.log(data);
+      // console.log(data);
       socket.broadcast.to(data.conversationId).emit("receiveMessage", data);
       sendMessage(data);
     });

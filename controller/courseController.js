@@ -20,7 +20,7 @@ const courseDetails = async (req, res, next) => {
       return;
     }
     return res.status(200).json({ message: "success", courseData });
-  }catch(err){
+  } catch (err) {
     next(err);
   }
 };
@@ -50,7 +50,7 @@ const createChapter = async (req, res, next) => {
       await chapter.save();
       res.status(201).json({ message: "Chapter saved successfully", chapter });
     }
-  }catch(err){
+  } catch (err) {
     next(err);
   }
 };
@@ -177,7 +177,10 @@ const dashboardData = async (req, res, next) => {
       isCompleted: true,
     });
     const publicCourseCount = publicCourses.length;
-    const payments = await paymentModel.find({ tutor: id });
+    const payments = await paymentModel.find({
+      tutor: id,
+      paymentToTutor: true,
+    });
     const totalRevenue = payments.reduce(
       (total, payment) => total + payment.price,
       0
@@ -203,10 +206,10 @@ const dashboardData = async (req, res, next) => {
 
 const handleReview = async (req, res, next) => {
   try {
-    console.log(req.body);
+    // console.log(req.body);
     const { rating, review, courseId, userId } = req.body;
     const user = new mongoose.Types.ObjectId(userId);
-    console.log("user", user);
+    // console.log("user", user);
     const newReview = courseReviewModel({
       rating,
       review,

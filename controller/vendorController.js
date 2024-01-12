@@ -1,6 +1,7 @@
 import userModel from "../model/userSchema.js";
 import courseModel from "../model/courses.js";
 import { cloudinary } from "../config/cloudinary.js";
+import paymentModel from "../model/payment.js";
 
 const createCourse = async (req, res, next) => {
   try {
@@ -82,37 +83,19 @@ const publicCoursesListing = async (req, res, next) => {
 const userListing = async (req, res, next) => {
   try {
     const { id, currentPage } = req.body;
-    const tutorCourses = await courseModel.find({ tutor: id }).populate({
-      path: "students",
-      select: "name email",
-    });
     const limit = 3;
-    const studentsWithCourses = [];
-    // Iterate through the courses and extract students with their enrolled courses
-    tutorCourses.forEach((course) => {
-      course.students.forEach((student) => {
-        studentsWithCourses.push({
-          student: student,
-          course: {
-            _id: course._id,
-            courseName: course.courseName,
-            price: course.price,
-            // Add other course details you want to include
-          },
-        });
-      });
-    });
-    const totalCount = studentsWithCourses.length;
-    console.log(studentsWithCourses);
-    console.log(studentsWithCourses.length);
-    const filteredData = studentsWithCourses.slice(
-      (currentPage - 1) * limit,
-      currentPage * limit
-    );
+    const totalCount = await paymentModel.countDocuments({ tutor: id });
+    const dataTable = await paymentModel
+      .find({ tutor: id })
+      .populate("course")
+      .populate("user")
+      .skip((currentPage - 1) * limit)
+      .limit(limit);
 
     return res.status(200).json({
       message: "Student list with enrolled courses successfully fetched",
-      tutorCourses: filteredData, totalCount: totalCount
+      tutorCourses: dataTable,
+      totalCount: totalCount,
     });
   } catch (err) {
     next(err);
@@ -156,44 +139,88 @@ const tutorProfileDetails = async (req, res, next) => {
   }
 };
 
-const test = async (req, res) => {
-  const search = req.query.searchItem;
-  const id = req.query.id;
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 10;
+const test = async (req, res, next) => {
+  try {
+    const search = req.query.searchItem;
+    const id = req.query.id;
+    const currentPage = req.query.currentPage;
+    const searchRegex = new RegExp(search, "i");
 
-  const tutorCourses = await courseModel
-    .find({ tutor: id })
-    .populate({
-      path: "students",
-      ref: "user",
-    })
-    .skip((page - 1) * limit)
-    .limit(limit);
-  const studentsWithCourses = [];
+    const limit = 3;
 
-  const searchRegex = new RegExp(search, "i");
+    const dataTable = await paymentModel
+      .find({ tutor: id })
+      .populate("course")
+      .populate("user");
 
-  tutorCourses.forEach((course) => {
-    course.students.forEach((student) => {
-      if (searchRegex.test(student.email)) {
-        studentsWithCourses.push({
-          student: student,
-          course: {
-            _id: course._id,
-            courseName: course.courseName,
-            price: course.price,
-          },
-        });
-      }
+    const filteredUsers = dataTable.filter((payment) =>
+      payment.user.email.match(searchRegex)
+    );
+
+    const filteredData = filteredUsers.slice(
+      (currentPage - 1) * limit,
+      currentPage * limit
+    );
+
+    return res.status(200).json({
+      message: "Student list with enrolled courses successfully fetched",
+      tutorCourses: filteredData,
+      totalCount: filteredUsers.length,
     });
-  });
-
-  return res.status(200).json({
-    message: "Student list with enrolled courses successfully fetched",
-    studentsWithCourses,
-  });
+  } catch (err) {
+    next(err);
+  }
 };
+
+export {
+  createCourse,
+  coursesListing,
+  userListing,
+  tutorEditImage,
+  tutorProfileDetails,
+  publicCoursesListing,
+  test,
+};
+
+///////////////////////////////////////////////////////////////////
+// const test = async (req, res) => {
+//   const search = req.query.searchItem;
+//   const id = req.query.id;
+//   const page = parseInt(req.query.page) || 1;
+//   const limit = parseInt(req.query.limit) || 10;
+
+//   const tutorCourses = await courseModel
+//     .find({ tutor: id })
+//     .populate({
+//       path: "students",
+//       ref: "user",
+//     })
+//     .skip((page - 1) * limit)
+//     .limit(limit);
+//   const studentsWithCourses = [];
+
+//   const searchRegex = new RegExp(search, "i");
+
+//   tutorCourses.forEach((course) => {
+//     course.students.forEach((student) => {
+//       if (searchRegex.test(student.email)) {
+//         studentsWithCourses.push({
+//           student: student,
+//           course: {
+//             _id: course._id,
+//             courseName: course.courseName,
+//             price: course.price,
+//           },
+//         });
+//       }
+//     });
+//   });
+
+//   return res.status(200).json({
+//     message: "Student list with enrolled courses successfully fetched",
+//     studentsWithCourses,
+//   });
+// };
 
 ////////////////////////////////////////////////////////
 // const getMyCourse = async (req, res) => {
@@ -250,12 +277,42 @@ const test = async (req, res) => {
 ///////////////////////////////////////////////////
 // };
 
-export {
-  createCourse,
-  coursesListing,
-  userListing,
-  tutorEditImage,
-  tutorProfileDetails,
-  publicCoursesListing,
-  test,
-};
+// const userListing = async (req, res, next) => {
+//   try {
+//     const { id, currentPage } = req.body;
+//     const tutorCourses = await courseModel.find({ tutor: id }).populate({
+//       path: "students",
+//       select: "name email",
+//     });
+//     const limit = 3;
+//     const studentsWithCourses = [];
+//     // Iterate through the courses and extract students with their enrolled courses
+//     tutorCourses.forEach((course) => {
+//       course.students.forEach((student) => {
+//         studentsWithCourses.push({
+//           student: student,
+//           course: {
+//             _id: course._id,
+//             courseName: course.courseName,
+//             price: course.price,
+//             // Add other course details you want to include
+//           },
+//         });
+//       });
+//     });
+//     const totalCount = studentsWithCourses.length;
+//     console.log(studentsWithCourses);
+//     console.log(studentsWithCourses.length);
+//     const filteredData = studentsWithCourses.slice(
+//       (currentPage - 1) * limit,
+//       currentPage * limit
+//     );
+
+//     return res.status(200).json({
+//       message: "Student list with enrolled courses successfully fetched",
+//       tutorCourses: filteredData, totalCount: totalCount
+//     });
+//   } catch (err) {
+//     next(err);
+//   }
+// };
