@@ -25,6 +25,7 @@ const io = new Server(server, {
     origin: ["https://skillsail.vercel.app/"],
     methods: ["GET", "POST"],
     credentials: true,
+    allowedHeaders: ['Content-Type'],
   },
 });
 configureSocket(io);
@@ -35,6 +36,7 @@ app.use(
     credentials: true,
     origin: ["https://skillsail.vercel.app/"],
     origin: true,
+    allowedHeaders: ['Content-Type'],
   })
 );
 

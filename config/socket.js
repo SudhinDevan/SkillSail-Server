@@ -2,7 +2,7 @@ import { sendMessage } from "../controller/chatController.js";
 
 const configureSocket = (io) => {
   io.on("connection", (socket) => {
-    console.log("socket connected");
+    console.log("socket connected", socket);
 
     socket.on("joinRoom", (conversationId) => {
       socket.join(conversationId);
