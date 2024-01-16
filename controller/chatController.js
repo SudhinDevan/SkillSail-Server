@@ -4,7 +4,7 @@ import messageModel from "../model/messageSchema.js";
 import dotenv from "dotenv";
 import courses from "../model/courses.js";
 import mongoose from "mongoose";
-import jwt from "jsonwebtoken";
+// import jwt from "jsonwebtoken";
 import crypto from "crypto";
 dotenv.config();
 
@@ -79,7 +79,7 @@ const allMessages = async (req, res) => {
     const recipientId = req.params.id;
     const userId = req.userId;
 
-    let conversationId = generateUniqueRoomId(userId, recipientId);
+    const conversationId = generateUniqueRoomId(userId, recipientId);
     // console.log("conversationId", conversationId);
 
     const existingChat = await ChatModel.findOne({ conversationId });

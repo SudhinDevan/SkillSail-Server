@@ -2,7 +2,7 @@ import dotenv from "dotenv";
 dotenv.config();
 import jwt from "jsonwebtoken";
 
-let accessTokenKey = process.env.JWT_SECRET_KEY;
+const accessTokenKey = process.env.JWT_SECRET_KEY;
 
 const verifyJWT = (req, res, next) => {
   const authHeader = req.headers.authorization || req.headers.Authorization;
