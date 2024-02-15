@@ -54,4 +54,34 @@ const sendMail = async (option) => {
   }
 };
 
-export { verifyEmail, sendMail };
+const mailSender = async (body) => {
+  try {
+    const transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
+      auth: {
+        user: process.env.AU_EMAIL,
+        pass: process.env.AU_PASS,
+      },
+      tls: {
+        rejectUnauthorized: false,
+      },
+    });
+
+    const mailOptions = {
+      from: '"Remainder Hub" <process.env.AU_EMAIL>',
+      to: body.email,
+      subject: `!!! Remainder for ${body.email} `,
+      html: `${body.message}`,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log("Email sent: " + info.response);
+    return "success";
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export { verifyEmail, sendMail, mailSender };
